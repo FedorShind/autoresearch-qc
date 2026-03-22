@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+dist/
+
+# Project
+run.log
+results.tsv
+*.npy
+*.npz
+
+# Editors
+.vscode/
+.idea/
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
