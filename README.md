@@ -156,4 +156,4 @@ Built on [karpathy/autoresearch](https://github.com/karpathy/autoresearch) and [
 
 ## License
 
-MIT
+MIT -- do whatever you want with this software.
