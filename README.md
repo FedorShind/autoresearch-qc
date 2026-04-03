@@ -1,89 +1,89 @@
 # autoresearch-qc
 
-![autoresearch-qc results](Images/progress.png)
+![results](Images/progress.png)
 
-A fork of [karpathy/autoresearch](https://github.com/karpathy/autoresearch) for quantum computing. Instead of optimizing an LLM training script, an AI agent iterates on a variational quantum circuit to minimize the ground-state energy error of molecules.
+A fork of [karpathy/autoresearch](https://github.com/karpathy/autoresearch) for quantum computing. An AI agent iterates on a quantum circuit to minimize the ground-state energy error of molecules -- same loop, different domain.
 
-It ran 70 experiments across four molecules (H₂, LiH, BeH₂, H₂O) and achieved chemical accuracy on all of them.
+140 experiments across 8 molecules. Chemical accuracy on all of them -- including strongly correlated systems and a hardware-constrained run with no chemistry-specific gates.
 
 ---
 
 ## Background
 
-The Variational Quantum Eigensolver (VQE) approximates the ground-state energy of a molecule using a parameterized quantum circuit. The hard part is designing that circuit -- choosing gate types, entanglement patterns, parameter initialization, optimizer settings.
+The Variational Quantum Eigensolver (VQE) approximates molecular ground-state energies using parameterized quantum circuits. Designing those circuits -- gate types, entanglement topology, parameter initialization, optimizer -- is the bottleneck. This project automates it.
 
-This is normally done by hand.
+An AI coding agent modifies the circuit code, runs a 5-minute optimization, checks the energy error, commits if improved, reverts if not, repeats. Same pattern as autoresearch, applied to quantum chemistry instead of LLM training.
 
-This project hands that job to an AI coding agent. The agent modifies the circuit code, runs a 5-minute optimization, checks whether the energy error went down, commits or reverts, and repeats. Same loop as autoresearch, different domain.
+**Energy error** = |computed − exact|, in Hartree. **Chemical accuracy** = error < 1.6 milliHartree. Below that, the results are useful for real chemistry.
 
-**Energy error** = |computed energy − exact energy|, in Hartree. **Chemical accuracy** = energy error < 1.6 milliHartree (mHa). Below this threshold, the results are useful for real chemistry.
-
-## Structure
-
-Same three-file pattern as the original:
-
-- **`prepare.py`** -- Hamiltonian construction, exact energy via diagonalization, evaluation, timer. Agent does not modify.
-- **`circuit.py`** -- Ansatz definition, optimizer config, VQE loop. **Agent modifies this.**
-- **`program.md`** -- Agent instructions with quantum-specific constraints. **Human modifies this.**
+## How it works
 
 | autoresearch | autoresearch-qc |
 |---|---|
-| `train.py` -- GPT model + training loop | `circuit.py` -- quantum ansatz + VQE loop |
+| `train.py` -- GPT model + training | `circuit.py` -- quantum ansatz + VQE |
 | `prepare.py` -- data prep + eval | `prepare.py` -- Hamiltonian + exact energy |
-| `val_bpb` (lower is better) | `energy_error` (lower is better) |
-| 5-min GPU training budget | 5-min CPU optimization budget |
-| single NVIDIA GPU | single CPU core (no GPU needed) |
+| `val_bpb` ↓ | `energy_error` ↓ |
+| 5-min GPU budget | 5-min CPU budget |
+| NVIDIA GPU | CPU only |
+
+Three files: `prepare.py` (frozen evaluation harness), `circuit.py` (agent edits this), `program.md` (human edits this).
 
 ## Results
 
-Four molecules, 15--20 experiments each, fully autonomous.
+Two rounds of experiments. First round: four molecules at equilibrium geometry. Second round: stress tests on strongly correlated and constrained systems.
 
-### H₂ -- hydrogen (4 qubits)
+### Round 1 -- equilibrium molecules
 
-![H2 results](Images/progress_h2.png)
+| Molecule | Qubits | Baseline | Best | Params | Strategy |
+|----------|--------|----------|------|--------|----------|
+| H₂ | 4 | 0.005 mHa | ≈0 | 1 | Single DoubleExcitation gate |
+| LiH | 6 | 145 mHa | 0.0001 mHa | 8 | UCCSD + Nesterov + zero init |
+| BeH₂ | 8 | 420 mHa | 0.0007 mHa | 12 | Same recipe, first attempt |
+| H₂O | 8 | 427 mHa | 0.0003 mHa | 12 | Same recipe, first attempt |
 
-Trivial. The baseline hardware-efficient ansatz (RY + CNOT) already hit chemical accuracy at 0.005 mHa. The agent reduced it further to machine precision using a single `DoubleExcitation` gate -- **1 parameter**, 0.2 seconds. H₂ doesn't test anything meaningful, but it validates the loop.
+The agent discovered a universal strategy on LiH (experiment #4) that transferred to every subsequent molecule without modification: Hartree-Fock initial state → SingleExcitation + DoubleExcitation gates → zero parameter initialization → Nesterov momentum, step 0.4, convergence threshold 1e-8.
 
-### LiH -- lithium hydride (6 qubits)
+On BeH₂ and H₂O, this recipe hit chemical accuracy on the first experiment -- 420 mHa → 0.0007 mHa in one step.
 
-![LiH results](Images/progress_lih.png)
+### Round 2 -- stress tests
 
-The baseline HEA started at 145 mHa -- 90x above chemical accuracy. Optimizer tuning, different entanglement patterns, initialization tricks -- none of it helped. On experiment #4 the agent switched to chemistry-inspired gates (`SingleExcitation` + `DoubleExcitation` from `qml.qchem.excitations`). Error dropped to 0.014 mHa. That's a 10,000x improvement from one architectural change. Further tuning brought it to 0.0001 mHa.
+![stress test results](Images/progress_stress.png)
 
-### BeH₂ -- beryllium hydride (8 qubits)
+| Molecule | Qubits | Correlation | Baseline | Best | Params | What happened |
+|----------|--------|-------------|----------|------|--------|---------------|
+| H₄ chain | 8 | Strong | 311 mHa | 0.004 mHa | 78 | Needed 3-layer UCCSD. Single layer hit 0.08 mHa -- still chemical accuracy, but 3 layers improved 20x. |
+| H₂ (3.0Å) | 4 | Strong | 0.62 mHa | ≈0 | 1 | Already at chemical accuracy from baseline. 4 qubits is too small to challenge anything. |
+| LiH (3.0Å) | 6 | Strong | 117 mHa | 0.0001 mHa | 8 | UCCSD worked despite literature claims it fails at stretched geometries. At this active space size (3 orbitals, STO-3G), the problem is tractable. Key difference from equilibrium: doubles-only failed at 6.17 mHa -- singles became essential. |
+| LiH (no chem gates) | 6 | Weak | 174 mHa | 0.30 mHa | 72 | Chemical accuracy with generic gates only. Required 4 layers, circular CNOT, triple rotation (RX+RY+RZ), small init ±0.1. Cost: 9x more parameters, 3000x worse accuracy vs UCCSD. |
 
-![BeH2 results](Images/progress_beh2.png)
+### Full summary
 
-First 8-qubit molecule. The agent applied what it learned on LiH (UCCSD gates + Nesterov momentum) and hit chemical accuracy on experiment #1 -- from 420 mHa to 0.0007 mHa. The remaining experiments tested how far parameters could be reduced: 12 (8 singles + 4 doubles) is the minimum. Dropping below 4 doubles breaks chemical accuracy for both 8-qubit molecules.
-
-### H₂O -- water (8 qubits)
-
-![H2O results](Images/progress_h2o.png)
-
-Baseline: 427 mHa. After the recipe: 0.0003 mHa. Oxygen's lone pairs didn't make a difference at this active-space size -- H₂O and BeH₂ behaved identically. Same minimum parameter count (12), same threshold behavior.
-
-### Summary
-
-| Molecule | Qubits | Baseline Error | Best Error | Min Params | Chem. Acc. at |
-|----------|--------|---------------|------------|------------|---------------|
-| H₂ | 4 | 0.005 mHa | ≈0 mHa | 1 | exp #0 |
-| LiH | 6 | 145.3 mHa | 0.0001 mHa | 8 | exp #4 |
-| BeH₂ | 8 | 420.2 mHa | 0.0007 mHa | 12 | exp #1 |
-| H₂O | 8 | 427.4 mHa | 0.0003 mHa | 12 | exp #1 |
+| Molecule | Qubits | Type | Best error | Chem. acc? |
+|----------|--------|------|-----------|------------|
+| H₂ | 4 | Equilibrium | ≈0 mHa | ✓ |
+| LiH | 6 | Equilibrium | 0.0001 mHa | ✓ |
+| BeH₂ | 8 | Equilibrium | 0.0007 mHa | ✓ |
+| H₂O | 8 | Equilibrium | 0.0003 mHa | ✓ |
+| H₄ chain | 8 | Strong corr. | 0.004 mHa | ✓ |
+| H₂ (3.0Å) | 4 | Stretched | ≈0 mHa | ✓ |
+| LiH (3.0Å) | 6 | Stretched | 0.0001 mHa | ✓ |
+| LiH (constrained) | 6 | No chem gates | 0.30 mHa | ✓ |
 
 ## Findings
 
-**1. Ansatz architecture dominates everything else.** Chemistry gates (`SingleExcitation`, `DoubleExcitation`) outperformed all hardware-efficient variants by 3--4 orders of magnitude on LiH. These gates encode particle-number conservation and orbital excitation structure. The optimizer doesn't need to rediscover physics that's already baked into the gate set.
+**Ansatz architecture dominates.** Chemistry gates outperformed all hardware-efficient variants by 3--4 orders of magnitude. One architectural change on LiH improved accuracy by 10,000x. No optimizer or hyperparameter tuning came close.
 
-**2. Easy molecules hide bad circuits.** H₂ gave chemical accuracy with a generic RY+CNOT ansatz. LiH did not -- the same ansatz missed by 90x. Testing only on simple problems gives a false sense of correctness.
+**The recipe survives strong correlation.** UCCSD + Nesterov achieved chemical accuracy on all 8 molecules, including strongly correlated H₄ and stretched-geometry LiH. Multi-layer UCCSD (3 Trotter steps) helps at high precision -- single-layer UCCSD plateaus at 0.08 mHa on H₄, three layers reach 0.004 mHa.
 
-**3. Fewer parameters, better results.** Best H₂ circuit: 1 parameter. Best LiH: 8. Best 8-qubit circuits: 26 full UCCSD, but 12 suffice for chemical accuracy. Chemistry gates operate in the relevant subspace -- fewer degrees of freedom, smoother landscape.
+**Generic gates can work, at a cost.** The constrained LiH run reached chemical accuracy (0.30 mHa) using only RX/RY/RZ + CNOT. But it needed 72 parameters vs 8 for UCCSD, and the accuracy was 3000x worse. The claim isn't "HEA fails on LiH" -- it's "HEA is 9x less efficient."
 
-**4. Sharp threshold at the 4th double excitation.** On both BeH₂ and H₂O, reducing from 4 to 3 double excitations pushes error from ~0.07 mHa to ~3--4 mHa. Not a gradual degradation -- a cliff.
+**The 4th double excitation is a cliff.** On both 8-qubit equilibrium molecules, dropping from 4 to 3 double excitations pushed error from ~0.07 mHa to ~3 mHa. Not gradual -- a discrete threshold.
 
-**5. Optimizer choice barely matters.** Nesterov, Adam, GD, COBYLA all converge to the same precision given the right ansatz. Speed differs (Nesterov/GD are 2--3x faster than Adam), accuracy does not.
+**Optimizer choice barely matters.** Nesterov, Adam, GD, COBYLA all converge to the same precision given the right ansatz. Speed differs (Nesterov/GD are 2--3x faster), accuracy does not.
 
-### The recipe that worked on everything
+**Small active spaces hide the hard problem.** The literature says UCCSD fails on stretched LiH. At 6 qubits / 3 orbitals / STO-3G, it doesn't. The real challenge requires larger basis sets or 12+ qubit active spaces where the correlation structure overwhelms UCCSD's expressibility.
+
+### The recipe
 
 ```
 1. BasisState(hf_state)               # Hartree-Fock initial state
@@ -93,7 +93,17 @@ Baseline: 427 mHa. After the recipe: 0.0003 mHa. Oxygen's lone pairs didn't make
 5. Nesterov, step=0.4, conv=1e-8      # tight convergence
 ```
 
-No modification needed across molecules. H₂ (1 param) through H₂O (26 params).
+For strongly correlated systems, repeat steps 2--3 with independent parameters (multi-layer UCCSD).
+
+## Bayesian optimization
+
+For systematic search over circuit configurations:
+
+```bash
+uv run optimize.py --molecule lih --n-trials 30
+```
+
+Ranks excitations by gradient importance, then uses GP-based Bayesian optimization to find the optimal subset and hyperparameters. Useful for finding the minimum circuit that achieves chemical accuracy.
 
 ## Quick start
 
@@ -103,12 +113,8 @@ Python 3.10+, [uv](https://docs.astral.sh/uv/). No GPU.
 git clone https://github.com/FedorShind/autoresearch-qc.git
 cd autoresearch-qc
 uv sync
-
-# verify
-uv run prepare.py
-
-# run baseline
-uv run circuit.py
+uv run prepare.py       # verify setup
+uv run circuit.py       # run baseline
 ```
 
 ## Running the agent
@@ -117,55 +123,37 @@ uv run circuit.py
 Read program.md and let's kick off a new experiment session.
 ```
 
-## Bayesian optimization mode
-
-For systematic search over circuit configurations:
-
-```bash
-uv run optimize.py --molecule lih --n-trials 30
-```
-
-This uses Gaussian Process-based Bayesian optimization to find the optimal excitation subset and hyperparameters. It ranks excitations by gradient importance, then searches over how many to include, which optimizer to use, and initialization strategy. Useful for finding the minimum circuit that achieves chemical accuracy.
-
-## Running the agent (details)
-
-Works with Claude Code, Codex, or any coding agent that can edit files and run shell commands. The agent creates a branch, runs the baseline, then iterates. ~12 experiments/hour on H₂, slower on larger molecules.
+Works with Claude Code, Codex, or any agent that can edit files and run shell commands.
 
 ## Molecules
 
-| Molecule | Qubits | Electrons | Difficulty | Notes |
-|----------|--------|-----------|------------|-------|
-| H₂ | 4 | 2 | Tutorial | Almost anything works |
-| LiH | 6 | 2 | Easy | Generic ansatzes fail here |
-| BeH₂ | 8 | 4 | Medium | More excitation paths |
-| H₂O | 8 | 4 | Medium | Classic benchmark |
-| H₄ chain | 8 | 4 | Hard | Strongly correlated, multi-reference |
+| Molecule | Qubits | Difficulty | Notes |
+|----------|--------|------------|-------|
+| H₂ | 4 | Tutorial | Anything works |
+| LiH | 6 | Easy | Generic ansatzes fail |
+| BeH₂ | 8 | Medium | More excitation paths |
+| H₂O | 8 | Medium | Classic benchmark |
+| H₄ chain | 8 | Hard | Strongly correlated |
+| H₂ (3.0Å) | 4 | Easy | Stretched geometry |
+| LiH (3.0Å) | 6 | Medium | Bond-breaking regime |
 
 Change `MOLECULE` in `prepare.py` to switch.
-
-## Design choices
-
-- **Single file to modify.** Agent only touches `circuit.py`. Diffs are reviewable.
-- **Fixed time budget.** 5 minutes per experiment. Small molecules finish in seconds; the budget matters at 8+ qubits.
-- **Real metric.** Chemical accuracy (1.6 mHa) is a standard from computational chemistry, not an arbitrary number.
-- **CPU-only.** ≤10 qubit simulation is fast on CPU. Runs on a laptop.
-- **Physics-informed instructions.** `program.md` includes barren plateau awareness, HF state priors, and gate recommendations that generic agents lack.
 
 ## Files
 
 ```
-prepare.py      — molecule setup, exact energy, evaluation (do not modify)
-circuit.py      — ansatz, optimizer, VQE loop (agent modifies this)
-program.md      — agent instructions (human modifies this)
-analysis.ipynb  — experiment analysis notebook
-plot.py         — generate progress charts from results.tsv
-pyproject.toml  — dependencies
+prepare.py      — Hamiltonian, exact energy, evaluation (frozen)
+circuit.py      — ansatz + VQE loop (agent edits)
+program.md      — agent instructions (human edits)
+optimize.py     — Bayesian optimization tool
+analysis.ipynb  — experiment analysis
+plot.py         — chart generation
 ```
 
 ## Acknowledgments
 
-Built on [karpathy/autoresearch](https://github.com/karpathy/autoresearch) and [PennyLane](https://pennylane.ai/) by Xanadu.
+Built on [karpathy/autoresearch](https://github.com/karpathy/autoresearch) and [PennyLane](https://pennylane.ai/).
 
 ## License
 
-MIT -- do whatever you want with this software.
+MIT
