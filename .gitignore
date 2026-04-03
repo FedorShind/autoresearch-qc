@@ -12,6 +12,7 @@ optimize_results_*.tsv
 *.npy
 *.npz
 BO-prompt.md
+stress-test.md
 
 # Editors
 .vscode/

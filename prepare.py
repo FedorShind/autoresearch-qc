@@ -71,6 +71,24 @@ MOLECULES: dict[str, dict[str, Any]] = {
         "active_electrons": 4,
         "active_orbitals": 4,
     },
+    "h2_stretched": {
+        "name": "H2 (stretched, 3.0 A)",
+        "symbols": ["H", "H"],
+        "coordinates": np.array([0.0, 0.0, 0.0, 0.0, 0.0, 3.0]),
+        "charge": 0,
+        "mult": 1,
+        "active_electrons": 2,
+        "active_orbitals": 2,
+    },
+    "lih_stretched": {
+        "name": "LiH (stretched, 3.0 A)",
+        "symbols": ["Li", "H"],
+        "coordinates": np.array([0.0, 0.0, 0.0, 0.0, 0.0, 3.0]),
+        "charge": 0,
+        "mult": 1,
+        "active_electrons": 2,
+        "active_orbitals": 3,
+    },
 }
 
 
