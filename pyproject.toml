@@ -16,3 +16,6 @@ analysis = [
     "matplotlib>=3.7",
     "pandas>=2.0",
 ]
+optimize = [
+    "scikit-optimize>=0.10",
+]

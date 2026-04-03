@@ -8,8 +8,10 @@ dist/
 # Project
 run.log
 results.tsv
+optimize_results_*.tsv
 *.npy
 *.npz
+BO-prompt.md
 
 # Editors
 .vscode/
