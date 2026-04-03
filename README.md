@@ -117,6 +117,18 @@ uv run circuit.py
 Read program.md and let's kick off a new experiment session.
 ```
 
+## Bayesian optimization mode
+
+For systematic search over circuit configurations:
+
+```bash
+uv run optimize.py --molecule lih --n-trials 30
+```
+
+This uses Gaussian Process-based Bayesian optimization to find the optimal excitation subset and hyperparameters. It ranks excitations by gradient importance, then searches over how many to include, which optimizer to use, and initialization strategy. Useful for finding the minimum circuit that achieves chemical accuracy.
+
+## Running the agent (details)
+
 Works with Claude Code, Codex, or any coding agent that can edit files and run shell commands. The agent creates a branch, runs the baseline, then iterates. ~12 experiments/hour on H₂, slower on larger molecules.
 
 ## Molecules

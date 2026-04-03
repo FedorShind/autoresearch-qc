@@ -68,6 +68,26 @@ You are optimizing a variational quantum circuit to find the ground-state energy
 6. **Parameter sharing**: Reuse the same parameters across layers to reduce dimensionality.
 7. **Adaptive strategies**: Start with few layers, add more if energy plateaus.
 
+### Using Bayesian Optimization
+
+For systematic hyperparameter and excitation search, use `optimize.py`:
+
+```
+uv run optimize.py --molecule [current_molecule] --n-trials 30
+```
+
+This runs a Bayesian optimization loop that:
+1. Ranks all excitations by gradient importance
+2. Searches over: number of singles, number of doubles, step size, optimizer, init scale
+3. Reports the best configuration found
+
+Use this when:
+- You've found the right ansatz class but want to optimize within it
+- You want to find the minimum parameter count for chemical accuracy
+- You're working on a molecule with many excitation paths
+
+The output includes a recommended configuration you can write directly into circuit.py.
+
 ### What NOT to Explore
 - Don't try to use more qubits than the molecule requires.
 - Don't modify the Hamiltonian construction or evaluation.
