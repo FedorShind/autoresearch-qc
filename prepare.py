@@ -5,11 +5,13 @@ Builds molecular Hamiltonians, computes exact ground-state energies,
 and provides evaluation utilities. The agent NEVER modifies this file.
 """
 
+import argparse
 import time
 from typing import Any
 
 import numpy as np
 import pennylane as qml
+from pennylane import noise as qml_noise
 
 # ============================================================
 # GLOBAL CONSTANTS
@@ -17,6 +19,10 @@ import pennylane as qml
 MOLECULE = "h2"  # Default — human changes this to level up
 TIME_BUDGET_SECONDS = 300  # 5-minute wall-clock budget for VQE optimization
 CHEMICAL_ACCURACY_HA = 0.0016  # 1.6 milliHartree threshold
+
+# Noise simulation (v3) — opt-in, 0.0 = noiseless (backward compatible)
+NOISE_STRENGTH = 0.0  # Depolarizing probability per gate (realistic: 0.001–0.01)
+NOISE_TYPE = "depolarizing"  # Only "depolarizing" supported currently
 
 # ============================================================
 # MOLECULE DEFINITIONS
@@ -90,6 +96,89 @@ MOLECULES: dict[str, dict[str, Any]] = {
         "active_orbitals": 3,
     },
 }
+
+
+def build_device(
+    n_qubits: int,
+    *,
+    noise_strength: float = 0.0,
+    noise_type: str = "depolarizing",
+) -> Any:
+    """Build a PennyLane device, noisy or noiseless depending on config.
+
+    When noise_strength > 0, uses default.mixed (density matrix simulator)
+    with a NoiseModel that inserts DepolarizingChannel after each gate.
+    When noise_strength == 0, uses default.qubit (statevector, faster).
+
+    Noise is attached at the device level (not in the circuit) so that
+    qml.noise.fold_global can fold the clean circuit for ZNE.
+
+    Args:
+        n_qubits: Number of qubits.
+        noise_strength: Depolarizing probability per gate. 0.0 = noiseless.
+        noise_type: Type of noise channel. Only "depolarizing" supported.
+
+    Returns:
+        A PennyLane device (possibly wrapped with a noise model).
+    """
+    if noise_strength <= 0:
+        return qml.device("default.qubit", wires=n_qubits)
+
+    if noise_type != "depolarizing":
+        raise ValueError(f"Unknown noise type: {noise_type!r}. Only 'depolarizing' supported.")
+
+    noise_model = qml_noise.NoiseModel({
+        qml_noise.op_in([
+            qml.RX, qml.RY, qml.RZ,
+            qml.CNOT, qml.CZ,
+            qml.SingleExcitation, qml.DoubleExcitation,
+            qml.Hadamard, qml.PauliX,
+        ]): qml_noise.partial_wires(qml.DepolarizingChannel, noise_strength),
+    })
+    dev = qml.device("default.mixed", wires=n_qubits)
+    return qml_noise.add_noise(dev, noise_model)
+
+
+def get_zne_config(
+    scale_factors: tuple[float, ...] = (1.0, 2.0, 3.0),
+    extrapolation: str = "polynomial",
+    polynomial_order: int = 2,
+) -> dict[str, Any]:
+    """Build ZNE configuration for qml.noise.mitigate_with_zne.
+
+    Returns a dict that can be unpacked directly:
+        mitigated_qnode = qml.noise.mitigate_with_zne(qnode, **get_zne_config())
+
+    Args:
+        scale_factors: Noise amplification levels for circuit folding.
+        extrapolation: Extrapolation method — "polynomial", "richardson",
+            or "exponential".
+        polynomial_order: Polynomial degree (only used when
+            extrapolation="polynomial").
+
+    Returns:
+        Dict with scale_factors, folding, and extrapolate keys.
+    """
+    extrapolate_fns = {
+        "polynomial": qml_noise.poly_extrapolate,
+        "richardson": qml_noise.richardson_extrapolate,
+        "exponential": qml_noise.exponential_extrapolate,
+    }
+    if extrapolation not in extrapolate_fns:
+        raise ValueError(
+            f"Unknown extrapolation: {extrapolation!r}. "
+            f"Options: {list(extrapolate_fns.keys())}"
+        )
+
+    extrapolate = extrapolate_fns[extrapolation]
+    if extrapolation == "polynomial":
+        extrapolate = lambda x, y, _fn=extrapolate: _fn(x, y, order=polynomial_order)
+
+    return {
+        "scale_factors": list(scale_factors),
+        "folding": qml_noise.fold_global,
+        "extrapolate": extrapolate,
+    }
 
 
 def build_hamiltonian(
@@ -199,8 +288,18 @@ class TimeBudget:
 
 
 if __name__ == "__main__":
-    config = MOLECULES[MOLECULE]
-    hamiltonian, n_qubits, n_electrons, hf_state = build_hamiltonian(MOLECULE)
+    parser = argparse.ArgumentParser(description="autoresearch-qc: prepare molecular Hamiltonians")
+    parser.add_argument("--molecule", default=MOLECULE, choices=list(MOLECULES.keys()),
+                        help="Molecule to simulate (default: %(default)s)")
+    parser.add_argument("--noise", type=float, default=0.0,
+                        help="Depolarizing noise strength per gate (0.0 = noiseless)")
+    args = parser.parse_args()
+
+    molecule_key = args.molecule
+    noise_strength = args.noise
+
+    config = MOLECULES[molecule_key]
+    hamiltonian, n_qubits, n_electrons, hf_state = build_hamiltonian(molecule_key)
     exact_energy = compute_exact_energy(hamiltonian, n_qubits)
 
     print("=== autoresearch-qc prepare ===")
@@ -210,4 +309,11 @@ if __name__ == "__main__":
     print(f"exact_energy: {exact_energy:.6f} Ha")
     print(f"chemical_accuracy_target: {CHEMICAL_ACCURACY_HA} Ha (1.6 mHa)")
     print(f"time_budget: {TIME_BUDGET_SECONDS}s")
+    if noise_strength > 0:
+        dev = build_device(n_qubits, noise_strength=noise_strength)
+        print(f"noise_strength: {noise_strength}")
+        print(f"noise_type: {NOISE_TYPE}")
+        print(f"device: default.mixed")
+    else:
+        print(f"device: default.qubit")
     print("Ready for experiments.")
