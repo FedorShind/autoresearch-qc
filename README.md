@@ -159,7 +159,7 @@ Works with Claude Code, Codex, or any agent that can edit files and run shell co
 | H₂ (3.0Å) | 4 | Easy | Stretched geometry |
 | LiH (3.0Å) | 6 | Medium | Bond-breaking regime |
 
-Change `MOLECULE` in `prepare.py` to switch.
+Switch molecules with `--molecule`: `uv run circuit.py --molecule lih`
 
 ## Files
 
