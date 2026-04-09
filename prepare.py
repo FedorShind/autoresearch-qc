@@ -11,6 +11,7 @@ from typing import Any
 
 import numpy as np
 import pennylane as qml
+from pennylane.boolean_fn import BooleanFn
 from pennylane import noise as qml_noise
 
 # ============================================================
@@ -127,13 +128,16 @@ def build_device(
     if noise_type != "depolarizing":
         raise ValueError(f"Unknown noise type: {noise_type!r}. Only 'depolarizing' supported.")
 
+    # Match all gate operations (including adjoints from ZNE folding),
+    # but not state preparation ops like BasisState/StatePrep.
+    class _AnyGate(BooleanFn):
+        def __init__(self) -> None:
+            super().__init__(
+                lambda op: not isinstance(op, (qml.BasisState, qml.StatePrep))
+            )
+
     noise_model = qml_noise.NoiseModel({
-        qml_noise.op_in([
-            qml.RX, qml.RY, qml.RZ,
-            qml.CNOT, qml.CZ,
-            qml.SingleExcitation, qml.DoubleExcitation,
-            qml.Hadamard, qml.PauliX,
-        ]): qml_noise.partial_wires(qml.DepolarizingChannel, noise_strength),
+        _AnyGate(): qml_noise.partial_wires(qml.DepolarizingChannel, noise_strength),
     })
     dev = qml.device("default.mixed", wires=n_qubits)
     return qml_noise.add_noise(dev, noise_model)
@@ -141,7 +145,7 @@ def build_device(
 
 def get_zne_config(
     scale_factors: tuple[float, ...] = (1.0, 2.0, 3.0),
-    extrapolation: str = "polynomial",
+    extrapolation: str = "linear",
     polynomial_order: int = 2,
 ) -> dict[str, Any]:
     """Build ZNE configuration for qml.noise.mitigate_with_zne.
@@ -151,8 +155,8 @@ def get_zne_config(
 
     Args:
         scale_factors: Noise amplification levels for circuit folding.
-        extrapolation: Extrapolation method — "polynomial", "richardson",
-            or "exponential".
+        extrapolation: Extrapolation method — "linear", "polynomial",
+            "richardson", or "exponential".
         polynomial_order: Polynomial degree (only used when
             extrapolation="polynomial").
 
@@ -160,6 +164,7 @@ def get_zne_config(
         Dict with scale_factors, folding, and extrapolate keys.
     """
     extrapolate_fns = {
+        "linear": qml_noise.poly_extrapolate,  # order=1 applied below
         "polynomial": qml_noise.poly_extrapolate,
         "richardson": qml_noise.richardson_extrapolate,
         "exponential": qml_noise.exponential_extrapolate,
@@ -171,7 +176,9 @@ def get_zne_config(
         )
 
     extrapolate = extrapolate_fns[extrapolation]
-    if extrapolation == "polynomial":
+    if extrapolation == "linear":
+        extrapolate = lambda x, y, _fn=extrapolate: _fn(x, y, order=1)
+    elif extrapolation == "polynomial":
         extrapolate = lambda x, y, _fn=extrapolate: _fn(x, y, order=polynomial_order)
 
     return {
