@@ -12,6 +12,8 @@ The agent can change:
 The agent CANNOT modify prepare.py.
 """
 
+import argparse
+
 import pennylane as qml
 from pennylane import numpy as pnp
 import numpy as np
@@ -19,6 +21,13 @@ from prepare import (
     MOLECULE, TIME_BUDGET_SECONDS, CHEMICAL_ACCURACY_HA,
     build_hamiltonian, compute_exact_energy, evaluate, TimeBudget
 )
+
+# ============================================================
+# CLI ARGUMENTS
+# ============================================================
+parser = argparse.ArgumentParser(description="VQE ansatz optimization")
+parser.add_argument("--molecule", default=MOLECULE, help="Molecule key (default: %(default)s)")
+args = parser.parse_args()
 
 # ============================================================
 # ANSATZ CONFIGURATION (agent edits these)
@@ -32,7 +41,7 @@ OPTIMIZER = "gradient_descent"  # options: gradient_descent, adam, nesterov
 # ============================================================
 # BUILD PROBLEM
 # ============================================================
-hamiltonian, n_qubits, n_electrons, hf_state = build_hamiltonian(MOLECULE)
+hamiltonian, n_qubits, n_electrons, hf_state = build_hamiltonian(args.molecule)
 exact_energy = compute_exact_energy(hamiltonian, n_qubits)
 dev = qml.device("default.qubit", wires=n_qubits)
 
