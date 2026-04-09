@@ -105,6 +105,28 @@ uv run optimize.py --molecule lih --n-trials 30
 
 Ranks excitations by gradient importance, then uses GP-based Bayesian optimization to find the optimal subset and hyperparameters. Useful for finding the minimum circuit that achieves chemical accuracy.
 
+## Noisy simulation (v3)
+
+Real quantum hardware has gate errors. v3 adds depolarizing noise simulation and
+ZNE (zero-noise extrapolation) error mitigation, so the agent faces a realistic
+depth-noise tradeoff: deeper circuits are more expressive but accumulate more noise.
+
+```bash
+# Run with simulated noise
+uv run noisy_circuit.py --molecule h2 --noise 0.005
+
+# Output includes:
+# - energy_error_noisy: raw error without mitigation
+# - energy_error_mitigated: after ZNE extrapolation
+# - improvement_factor: how much ZNE helped
+```
+
+Uses PennyLane's `default.mixed` density matrix simulator with `DepolarizingChannel`
+inserted after each gate. ZNE runs the circuit at multiple noise levels (via circuit
+folding) and extrapolates to the zero-noise limit.
+
+The noisy agent edits `noisy_circuit.py` and follows `program_noisy.md`.
+
 ## Quick start
 
 Python 3.10+, [uv](https://docs.astral.sh/uv/). No GPU.
@@ -142,12 +164,14 @@ Change `MOLECULE` in `prepare.py` to switch.
 ## Files
 
 ```
-prepare.py      — Hamiltonian, exact energy, evaluation (frozen)
-circuit.py      — ansatz + VQE loop (agent edits)
-program.md      — agent instructions (human edits)
-optimize.py     — Bayesian optimization tool
-analysis.ipynb  — experiment analysis
-plot.py         — chart generation
+prepare.py        — Hamiltonian, exact energy, evaluation, noise model (frozen)
+circuit.py        — ansatz + VQE loop (agent edits, noiseless mode)
+noisy_circuit.py  — ansatz + noisy VQE + ZNE mitigation (agent edits, noisy mode)
+program.md        — agent instructions, noiseless (human edits)
+program_noisy.md  — agent instructions, noisy mode (human edits)
+optimize.py       — Bayesian optimization tool
+analysis.ipynb    — experiment analysis
+plot.py           — chart generation
 ```
 
 ## Acknowledgments
