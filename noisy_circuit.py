@@ -19,7 +19,7 @@ from pennylane import noise as qml_noise
 from pennylane import numpy as pnp
 import numpy as np
 from prepare import (
-    MOLECULE, TIME_BUDGET_SECONDS, CHEMICAL_ACCURACY_HA,
+    MOLECULE, MOLECULES, TIME_BUDGET_SECONDS, CHEMICAL_ACCURACY_HA,
     build_hamiltonian, compute_exact_energy, evaluate, TimeBudget,
     build_device, get_zne_config,
 )
@@ -28,7 +28,8 @@ from prepare import (
 # CLI ARGUMENTS
 # ============================================================
 parser = argparse.ArgumentParser(description="Noisy VQE with error mitigation")
-parser.add_argument("--molecule", default=MOLECULE, help="Molecule key (default: %(default)s)")
+parser.add_argument("--molecule", default=MOLECULE, choices=list(MOLECULES.keys()),
+                    help="Molecule key (default: %(default)s)")
 parser.add_argument("--noise", type=float, default=0.005, help="Noise strength (default: 0.005)")
 args = parser.parse_args()
 
