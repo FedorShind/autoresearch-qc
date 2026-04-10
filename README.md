@@ -4,7 +4,7 @@
 
 A fork of [karpathy/autoresearch](https://github.com/karpathy/autoresearch) for quantum computing. An AI agent iterates on a quantum circuit to minimize the ground-state energy error of molecules -- same loop, different domain.
 
-140 experiments across 8 molecules. Chemical accuracy on all of them -- including strongly correlated systems and a hardware-constrained run with no chemistry-specific gates.
+140 experiments across 8 molecules. Chemical accuracy on all of them. Under simulated hardware noise, Bayesian optimization found that **shallower circuits outperform full UCCSD by 14--18x after error mitigation** -- a validated finding about noise-optimal circuit design.
 
 ---
 
@@ -30,60 +30,88 @@ Three files: `prepare.py` (frozen evaluation harness), `circuit.py` (agent edits
 
 ## Results
 
-Two rounds of experiments. First round: four molecules at equilibrium geometry. Second round: stress tests on strongly correlated and constrained systems.
+### Noiseless -- 8 molecules, chemical accuracy on all
 
-### Round 1 -- equilibrium molecules
+| Molecule | Qubits | Type | Baseline | Best | Params | Strategy |
+|----------|--------|------|----------|------|--------|----------|
+| H₂ | 4 | Equilibrium | 0.005 mHa | ≈0 | 1 | Single DoubleExcitation |
+| LiH | 6 | Equilibrium | 145 mHa | 0.0001 mHa | 8 | UCCSD + Nesterov + zero init |
+| BeH₂ | 8 | Equilibrium | 420 mHa | 0.0007 mHa | 12 | Same recipe, first attempt |
+| H₂O | 8 | Equilibrium | 427 mHa | 0.0003 mHa | 12 | Same recipe, first attempt |
+| H₄ chain | 8 | Strong corr. | 311 mHa | 0.004 mHa | 78 | 3-layer UCCSD |
+| H₂ (3.0Å) | 4 | Stretched | 0.62 mHa | ≈0 | 1 | Single DoubleExcitation |
+| LiH (3.0Å) | 6 | Stretched | 117 mHa | 0.0001 mHa | 8 | UCCSD, all excitations |
+| LiH (no chem gates) | 6 | Constrained | 174 mHa | 0.30 mHa | 72 | 4L RX+RY+RZ, circular CNOT |
 
-| Molecule | Qubits | Baseline | Best | Params | Strategy |
-|----------|--------|----------|------|--------|----------|
-| H₂ | 4 | 0.005 mHa | ≈0 | 1 | Single DoubleExcitation gate |
-| LiH | 6 | 145 mHa | 0.0001 mHa | 8 | UCCSD + Nesterov + zero init |
-| BeH₂ | 8 | 420 mHa | 0.0007 mHa | 12 | Same recipe, first attempt |
-| H₂O | 8 | 427 mHa | 0.0003 mHa | 12 | Same recipe, first attempt |
+The agent discovered a universal recipe on LiH (experiment #4) that transferred to every subsequent molecule: Hartree-Fock state → SingleExcitation + DoubleExcitation gates → zero init → Nesterov step 0.4, conv 1e-8. On BeH₂ and H₂O, it hit chemical accuracy on the first experiment.
 
-The agent discovered a universal strategy on LiH (experiment #4) that transferred to every subsequent molecule without modification: Hartree-Fock initial state → SingleExcitation + DoubleExcitation gates → zero parameter initialization → Nesterov momentum, step 0.4, convergence threshold 1e-8.
-
-On BeH₂ and H₂O, this recipe hit chemical accuracy on the first experiment -- 420 mHa → 0.0007 mHa in one step.
-
-### Round 2 -- stress tests
+### Stress tests
 
 ![stress test results](Images/progress_stress.png)
 
-| Molecule | Qubits | Correlation | Baseline | Best | Params | What happened |
-|----------|--------|-------------|----------|------|--------|---------------|
-| H₄ chain | 8 | Strong | 311 mHa | 0.004 mHa | 78 | Needed 3-layer UCCSD. Single layer hit 0.08 mHa -- still chemical accuracy, but 3 layers improved 20x. |
-| H₂ (3.0Å) | 4 | Strong | 0.62 mHa | ≈0 | 1 | Already at chemical accuracy from baseline. 4 qubits is too small to challenge anything. |
-| LiH (3.0Å) | 6 | Strong | 117 mHa | 0.0001 mHa | 8 | UCCSD worked despite literature claims it fails at stretched geometries. At this active space size (3 orbitals, STO-3G), the problem is tractable. Key difference from equilibrium: doubles-only failed at 6.17 mHa -- singles became essential. |
-| LiH (no chem gates) | 6 | Weak | 174 mHa | 0.30 mHa | 72 | Chemical accuracy with generic gates only. Required 4 layers, circular CNOT, triple rotation (RX+RY+RZ), small init ±0.1. Cost: 9x more parameters, 3000x worse accuracy vs UCCSD. |
+**H₄ chain** needed 3-layer UCCSD -- the only molecule where repeating the excitation block mattered. Single layer plateaued at 0.08 mHa, three layers reached 0.004 mHa.
 
-### Full summary
+**Stretched LiH (3.0Å)** worked despite literature claims that UCCSD fails at bond-breaking geometries. At this active space size (3 orbitals, STO-3G), the problem is tractable. Key difference from equilibrium: doubles-only failed at 6.17 mHa -- singles became essential.
 
-| Molecule | Qubits | Type | Best error | Chem. acc? |
-|----------|--------|------|-----------|------------|
-| H₂ | 4 | Equilibrium | ≈0 mHa | ✓ |
-| LiH | 6 | Equilibrium | 0.0001 mHa | ✓ |
-| BeH₂ | 8 | Equilibrium | 0.0007 mHa | ✓ |
-| H₂O | 8 | Equilibrium | 0.0003 mHa | ✓ |
-| H₄ chain | 8 | Strong corr. | 0.004 mHa | ✓ |
-| H₂ (3.0Å) | 4 | Stretched | ≈0 mHa | ✓ |
-| LiH (3.0Å) | 6 | Stretched | 0.0001 mHa | ✓ |
-| LiH (constrained) | 6 | No chem gates | 0.30 mHa | ✓ |
+**Constrained LiH** (no chemistry gates) reached chemical accuracy with generic RX/RY/RZ + CNOT. Cost: 72 parameters vs 8 for UCCSD, 3000x worse accuracy. HEA doesn't fail on LiH -- it's 9x less efficient.
+
+## Discovery: noise-optimal circuit design
+
+Under simulated hardware noise, the optimal circuit structure changes. Full details in [`discovery_report.md`](discovery_report.md).
+
+### The question
+
+Given depolarizing noise at strength p and ZNE error mitigation, does the optimal number of excitation gates decrease? Does a shallower circuit beat full UCCSD after mitigation?
+
+### The answer
+
+Yes. Bayesian optimization over excitation subsets at three noise levels on LiH:
+
+| Noise (p) | Optimal doubles | Params | Mitigated error | Full UCCSD mitigated | Advantage |
+|-----------|-----------------|--------|-----------------|---------------------|-----------|
+| 0.001 | 2 | 2 | 0.0001 mHa | 0.50 mHa | ~5000x |
+| 0.005 | 2 | 2 | 0.029 mHa | 2.71 mHa | 93x |
+| 0.01 | 2 | 2 | 0.34 mHa | 5.85 mHa | 17x |
+
+At every noise level, 2 double excitations (the top-ranked by gradient magnitude) outperform the full set of 4 doubles + 4 singles. The 3rd and 4th doubles add more noise through their gates than they remove through expressibility.
+
+### Validation
+
+Direct sweep of n_doubles (1 to 4) at p=0.01, two evaluation modes:
+- **Mode A**: parameters optimized under noise
+- **Mode B**: parameters optimized noiseless, then evaluated under noise + ZNE
+
+Both modes agree to within 0.002 mHa. The confound check passes -- the finding reflects noise accumulation physics, not optimization difficulty.
+
+```
+LiH at p=0.01:
+  n_d=1:  1.59 mHa
+  n_d=2:  0.13 mHa  ← optimal
+  n_d=3:  2.42 mHa  (18x worse than n_d=2)
+  n_d=4:  1.79 mHa  (14x worse than n_d=2)
+```
+
+### Mechanism
+
+Every gate adds noise proportional to p. Gates with low gradient magnitude become net-negative under noise -- they add more error through noise than they remove through expressibility. ZNE is more effective on shallower circuits where the noise-energy relationship is more linear.
+
+Practical implication: gradient-based excitation ranking should be used to prune low-impact gates, more aggressively under noise than in the noiseless case.
 
 ## Findings
 
-**Ansatz architecture dominates.** Chemistry gates outperformed all hardware-efficient variants by 3--4 orders of magnitude. One architectural change on LiH improved accuracy by 10,000x. No optimizer or hyperparameter tuning came close.
+**Ansatz architecture dominates.** Chemistry gates outperformed all hardware-efficient variants by 3--4 orders of magnitude. One architectural change on LiH improved accuracy by 10,000x.
 
-**The recipe survives strong correlation.** UCCSD + Nesterov achieved chemical accuracy on all 8 molecules, including strongly correlated H₄ and stretched-geometry LiH. Multi-layer UCCSD (3 Trotter steps) helps at high precision -- single-layer UCCSD plateaus at 0.08 mHa on H₄, three layers reach 0.004 mHa.
+**The recipe survives strong correlation.** UCCSD + Nesterov achieved chemical accuracy on all 8 molecules. Multi-layer UCCSD helps on H₄ chain -- single layer 0.08 mHa, three layers 0.004 mHa.
 
-**Generic gates can work, at a cost.** The constrained LiH run reached chemical accuracy (0.30 mHa) using only RX/RY/RZ + CNOT. But it needed 72 parameters vs 8 for UCCSD, and the accuracy was 3000x worse. The claim isn't "HEA fails on LiH" -- it's "HEA is 9x less efficient."
+**Generic gates can work, at a cost.** Constrained LiH reached chemical accuracy with RX/RY/RZ + CNOT, but needed 9x more parameters for 3000x worse accuracy.
 
-**The 4th double excitation is a cliff.** On both 8-qubit equilibrium molecules, dropping from 4 to 3 double excitations pushed error from ~0.07 mHa to ~3 mHa. Not gradual -- a discrete threshold.
+**The 4th double excitation is a cliff.** On 8-qubit molecules, dropping from 4 to 3 doubles pushed error from ~0.07 mHa to ~3 mHa.
 
-**Optimizer choice barely matters.** Nesterov, Adam, GD, COBYLA all converge to the same precision given the right ansatz. Speed differs (Nesterov/GD are 2--3x faster), accuracy does not.
+**Under noise, shallower circuits win.** Full UCCSD is optimal noiseless but counterproductive under noise. 2 doubles beat 4 doubles + 4 singles by 17x at p=0.01. Validated with confound check.
 
-**Small active spaces hide the hard problem.** The literature says UCCSD fails on stretched LiH. At 6 qubits / 3 orbitals / STO-3G, it doesn't. The real challenge requires larger basis sets or 12+ qubit active spaces where the correlation structure overwhelms UCCSD's expressibility.
+**Optimizer choice barely matters.** Nesterov, Adam, GD, COBYLA all converge to the same precision given the right ansatz.
 
-### The recipe
+### The noiseless recipe
 
 ```
 1. BasisState(hf_state)               # Hartree-Fock initial state
@@ -93,39 +121,37 @@ On BeH₂ and H₂O, this recipe hit chemical accuracy on the first experiment -
 5. Nesterov, step=0.4, conv=1e-8      # tight convergence
 ```
 
-For strongly correlated systems, repeat steps 2--3 with independent parameters (multi-layer UCCSD).
+### The noisy recipe
+
+```
+1. Rank excitations by gradient magnitude at Hartree-Fock state
+2. Keep only the top-ranked doubles (discard low-gradient excitations)
+3. Apply ZNE with scale factors [1, 2, 3] and linear extrapolation
+4. The optimal pruning threshold increases with noise strength
+```
+
+## Noisy simulation
+
+```bash
+# Run with simulated hardware noise
+uv run noisy_circuit.py --molecule lih --noise 0.005
+
+# Bayesian optimization under noise
+uv run optimize_noisy.py --molecule lih --noise 0.005 --n-trials 25
+
+# Direct sweep of excitation count vs noise level
+uv run validate_sweep.py --molecule lih
+```
+
+Uses PennyLane's `default.mixed` density matrix simulator with `DepolarizingChannel` after each gate. ZNE via global circuit folding and polynomial extrapolation.
 
 ## Bayesian optimization
-
-For systematic search over circuit configurations:
 
 ```bash
 uv run optimize.py --molecule lih --n-trials 30
 ```
 
-Ranks excitations by gradient importance, then uses GP-based Bayesian optimization to find the optimal subset and hyperparameters. Useful for finding the minimum circuit that achieves chemical accuracy.
-
-## Noisy simulation (v3)
-
-Real quantum hardware has gate errors. v3 adds depolarizing noise simulation and
-ZNE (zero-noise extrapolation) error mitigation, so the agent faces a realistic
-depth-noise tradeoff: deeper circuits are more expressive but accumulate more noise.
-
-```bash
-# Run with simulated noise
-uv run noisy_circuit.py --molecule h2 --noise 0.005
-
-# Output includes:
-# - energy_error_noisy: raw error without mitigation
-# - energy_error_mitigated: after ZNE extrapolation
-# - improvement_factor: how much ZNE helped
-```
-
-Uses PennyLane's `default.mixed` density matrix simulator with `DepolarizingChannel`
-inserted after each gate. ZNE runs the circuit at multiple noise levels (via circuit
-folding) and extrapolates to the zero-noise limit.
-
-The noisy agent edits `noisy_circuit.py` and follows `program_noisy.md`.
+Ranks excitations by gradient importance, then uses GP-based Bayesian optimization to find the optimal subset and hyperparameters.
 
 ## Quick start
 
@@ -164,14 +190,17 @@ Switch molecules with `--molecule`: `uv run circuit.py --molecule lih`
 ## Files
 
 ```
-prepare.py        — Hamiltonian, exact energy, evaluation, noise model (frozen)
-circuit.py        — ansatz + VQE loop (agent edits, noiseless mode)
-noisy_circuit.py  — ansatz + noisy VQE + ZNE mitigation (agent edits, noisy mode)
-program.md        — agent instructions, noiseless (human edits)
-program_noisy.md  — agent instructions, noisy mode (human edits)
-optimize.py       — Bayesian optimization tool
-analysis.ipynb    — experiment analysis
-plot.py           — chart generation
+prepare.py          — Hamiltonian, exact energy, evaluation, noise config (frozen)
+circuit.py          — ansatz + VQE loop (agent edits, noiseless)
+noisy_circuit.py    — ansatz + noisy VQE + ZNE (agent edits, noisy mode)
+optimize.py         — Bayesian optimization, noiseless
+optimize_noisy.py   — Bayesian optimization under noise
+validate_sweep.py   — direct excitation count sweep for validation
+program.md          — agent instructions, noiseless
+program_noisy.md    — agent instructions, noisy mode
+discovery_report.md — noise-optimal circuit findings + validation
+analysis.ipynb      — experiment analysis
+plot.py             — chart generation
 ```
 
 ## Acknowledgments
