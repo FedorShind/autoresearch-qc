@@ -57,6 +57,53 @@ Excitation importance ranking for LiH at different noise levels:
 - **Singles acquire nonzero gradients** under noise despite being exactly zero in the noiseless case. Noise breaks symmetries that made singles irrelevant.
 - The gradient decay rate is proportional to gate count: doubles (4-qubit gates) decay faster than the overall noise scaling, suggesting they contribute more noise per unit of gradient.
 
+## Validation
+
+### Method
+
+Direct deterministic sweep of n_doubles (1 to 4) at fixed hyperparameters (Nesterov, step=0.4, zero init, conv=1e-8) across four noise levels. No BO, no randomness in circuit selection. Two evaluation modes:
+
+1. **Mode A -- Noisy-optimized**: params trained under noise, evaluated with ZNE
+2. **Mode B -- Fixed-params**: params trained noiseless, evaluated under noise+ZNE (no re-optimization)
+
+If both modes show the same pattern, the finding is about noise accumulation physics, not optimization difficulty.
+
+### LiH validation sweep (zero singles variant)
+
+Mode A -- Noisy-Optimized (ZNE-mitigated error, mHa):
+
+| n_d | params | noiseless | p=0.001 | p=0.005 | p=0.01 |
+|-----|--------|-----------|---------|---------|--------|
+| 1 | 1 | 0.207 | 0.009 | 0.742 | 1.588 |
+| 2 | 2 | 0.030 | **0.000** | **0.030** | **0.133** |
+| 3 | 3 | 0.030 | 0.189 | 1.009 | 2.421 |
+| 4 | 4 | 0.030 | 0.052 | 0.497 | 1.792 |
+
+Mode B -- Fixed-Params confound check (ZNE-mitigated error, mHa):
+
+| n_d | params | noiseless | p=0.001 | p=0.005 | p=0.01 |
+|-----|--------|-----------|---------|---------|--------|
+| 1 | 1 | 0.207 | 0.009 | 0.742 | 1.588 |
+| 2 | 2 | 0.030 | **0.001** | **0.030** | **0.132** |
+| 3 | 3 | 0.030 | 0.189 | 1.009 | 2.421 |
+| 4 | 4 | 0.030 | 0.052 | 0.495 | 1.791 |
+
+### Confound check: PASS
+
+Mode A and Mode B produce nearly identical results (differences < 0.002 mHa). The optimal n_doubles is 2 at every noise level in both modes. The finding is about noise accumulation in the circuit, not optimization difficulty under noise.
+
+### Key observations
+
+1. **n_d=2 is optimal at all noise levels.** Adding a 3rd or 4th double makes mitigated error worse despite improving ideal (noiseless) accuracy.
+
+2. **The crossover is clear.** At p=0.01: n_d=2 gives 0.13 mHa while n_d=4 gives 1.79 mHa -- a 13.5x penalty for using the full circuit.
+
+3. **n_d=1 is suboptimal even under noise.** The top-ranked double alone has ideal error of 0.207 mHa (misses the 2nd important double). At low noise (p=0.001), adding the 2nd double is still worth it.
+
+4. **ZNE overshoot at low noise.** Some n_d=2 results at p=0.001 show mitigated error below the ideal error. This is a known ZNE artifact -- linear extrapolation can overcorrect when the noise-energy relationship is sub-linear.
+
+![LiH crossover plot](validation_crossover_lih.png)
+
 ## Conclusion
 
 Under depolarizing noise with ZNE mitigation, the optimal VQE circuit is consistently shallower than the noiseless optimum. For both H2 and LiH, Bayesian optimization discovers excitation subsets that outperform full UCCSD by 1.7--17x in mitigated accuracy while using 33--67% fewer parameters.
