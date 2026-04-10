@@ -109,7 +109,7 @@ def rank_excitations_noisy(
 
     dev = build_device(n_qubits, noise_strength=noise_strength)
 
-    @qml.qnode(dev)
+    @qml.qnode(dev, diff_method="parameter-shift")
     def circuit(params: pnp.tensor) -> float:
         qml.BasisState(hf_state, wires=range(n_qubits))
         for i, s in enumerate(singles):
