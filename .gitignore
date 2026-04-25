@@ -11,12 +11,9 @@ results.tsv
 optimize_results_*.tsv
 optimize_noisy_results_*.tsv
 validate_sweep_*.tsv
-stress_results_*.tsv
-run_stress_test.py
 *.npy
 *.npz
 BO-prompt.md
-stress-test.md
 
 # Editors
 .vscode/
