@@ -19,7 +19,8 @@ You modify `noisy_circuit.py` (not `circuit.py`).
    - `README.md` — repository context
    - `prepare.py` — frozen infrastructure: Hamiltonian construction, exact energy, evaluation, timer, noise model. **Do not modify.**
    - `noisy_circuit.py` — the file you modify. Ansatz definition, optimizer config, noise/mitigation settings.
-3. Verify setup: run `uv run noisy_circuit.py --molecule h2 --noise 0.005` and confirm it prints results without errors
+   - `molecules/*.yaml` — molecule definitions. One file per molecule. Add a new molecule by creating a YAML file (see `molecules/README.md` for the schema).
+3. Verify setup: run `uv run noisy_circuit.py --molecule h2 --noise 0.005` and confirm it prints results without errors. Pass `--bond-length <Å>` on diatomics and chains to vary geometry without editing files.
 4. Initialize `results.tsv` with header row:
    `experiment	tag	energy_error	energy_error_mha	chemical_accuracy	energy_error_noisy	energy_error_mitigated	energy_error_ideal	improvement_factor	noise_strength	mitigation_method	n_params	circuit_depth	wall_time	notes`
 5. Confirm and go.

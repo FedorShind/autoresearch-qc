@@ -182,10 +182,16 @@ Works with Claude Code, Codex, or any agent that can edit files and run shell co
 | BeH₂ | 8 | Medium | More excitation paths |
 | H₂O | 8 | Medium | Classic benchmark |
 | H₄ chain | 8 | Hard | Strongly correlated |
-| H₂ (3.0Å) | 4 | Easy | Stretched geometry |
-| LiH (3.0Å) | 6 | Medium | Bond-breaking regime |
 
-Switch molecules with `--molecule`: `uv run circuit.py --molecule lih`
+Switch molecules with `--molecule`: `uv run circuit.py --molecule lih`.
+
+Vary geometry on diatomics and chains with `--bond-length` (Å):
+`uv run circuit.py --molecule lih --bond-length 3.0`. Fixed-geometry
+molecules (BeH₂, H₂O) reject this flag. Each molecule's allowed range
+lives in its `molecules/<key>.yaml`.
+
+Add a new molecule by creating `molecules/<key>.yaml` — see
+[`molecules/README.md`](molecules/README.md) for the schema.
 
 ## Files
 
@@ -196,6 +202,7 @@ noisy_circuit.py    — ansatz + noisy VQE + ZNE (agent edits, noisy mode)
 optimize.py         — Bayesian optimization, noiseless
 optimize_noisy.py   — Bayesian optimization under noise
 validate_sweep.py   — direct excitation count sweep for validation
+molecules/          — molecule definitions (one .yaml per molecule)
 program.md          — agent instructions, noiseless
 program_noisy.md    — agent instructions, noisy mode
 discovery_report.md — noise-optimal circuit findings + validation

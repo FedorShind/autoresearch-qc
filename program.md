@@ -9,7 +9,8 @@ You are an autonomous research agent iterating on a variational quantum circuit 
    - `README.md` — repository context
    - `prepare.py` — frozen infrastructure: Hamiltonian construction, exact energy, evaluation, timer. **Do not modify.**
    - `circuit.py` — the file you modify. Ansatz definition, optimizer config, optimization loop.
-3. Verify setup: run `uv run prepare.py` and confirm it prints molecule info without errors
+   - `molecules/*.yaml` — molecule definitions. One file per molecule. Add a new molecule by creating a YAML file (see `molecules/README.md` for the schema).
+3. Verify setup: run `uv run prepare.py` and confirm it prints molecule info without errors. Pass `--bond-length <Å>` on diatomics and chains to vary geometry without editing files.
 4. Initialize `results.tsv` with header row:
    `experiment	tag	energy_error	energy_error_mha	chemical_accuracy	computed_energy	n_params	circuit_depth	wall_time	notes`
    The baseline will be recorded after the first run.
