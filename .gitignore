@@ -11,6 +11,7 @@ results.tsv
 optimize_results_*.tsv
 optimize_noisy_results_*.tsv
 validate_sweep_*.tsv
+phase_data_*.tsv
 *.npy
 *.npz
 BO-prompt.md
