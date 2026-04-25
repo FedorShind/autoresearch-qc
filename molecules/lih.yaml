@@ -1,0 +1,11 @@
+name: "LiH"
+description: "Lithium hydride at equilibrium (1.546 Å)"
+symbols: ["Li", "H"]
+charge: 0
+multiplicity: 1
+active_electrons: 2
+active_orbitals: 3
+geometry:
+  type: "diatomic"
+  default_bond_length: 1.546
+  bond_length_range: [0.5, 4.0]

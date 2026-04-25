@@ -1,0 +1,8 @@
+name: "BeH2"
+description: "Beryllium hydride, linear equilibrium geometry"
+symbols: ["Be", "H", "H"]
+coordinates: [0.0, 0.0, 0.0, 0.0, 0.0, 1.326, 0.0, 0.0, -1.326]
+charge: 0
+multiplicity: 1
+active_electrons: 4
+active_orbitals: 4

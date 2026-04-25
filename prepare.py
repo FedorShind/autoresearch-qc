@@ -7,10 +7,12 @@ and provides evaluation utilities. The agent NEVER modifies this file.
 
 import argparse
 import time
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pennylane as qml
+import yaml
 from pennylane.boolean_fn import BooleanFn
 from pennylane import noise as qml_noise
 
@@ -26,77 +28,109 @@ NOISE_STRENGTH = 0.0  # Depolarizing probability per gate (realistic: 0.001–0.
 NOISE_TYPE = "depolarizing"  # Only "depolarizing" supported currently
 
 # ============================================================
-# MOLECULE DEFINITIONS
+# MOLECULE DEFINITIONS — loaded from molecules/*.yaml
 # ============================================================
-MOLECULES: dict[str, dict[str, Any]] = {
-    "h2": {
-        "name": "H2",
-        "symbols": ["H", "H"],
-        "coordinates": np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.735]),
-        "charge": 0,
-        "mult": 1,
-        "active_electrons": 2,
-        "active_orbitals": 2,
-    },
-    "lih": {
-        "name": "LiH",
-        "symbols": ["Li", "H"],
-        "coordinates": np.array([0.0, 0.0, 0.0, 0.0, 0.0, 1.546]),
-        "charge": 0,
-        "mult": 1,
-        "active_electrons": 2,
-        "active_orbitals": 3,
-    },
-    "beh2": {
-        "name": "BeH2",
-        "symbols": ["Be", "H", "H"],
-        "coordinates": np.array([0.0, 0.0, 0.0, 0.0, 0.0, 1.326, 0.0, 0.0, -1.326]),
-        "charge": 0,
-        "mult": 1,
-        "active_electrons": 4,
-        "active_orbitals": 4,
-    },
-    "h2o": {
-        "name": "Water",
-        "symbols": ["O", "H", "H"],
-        "coordinates": np.array(
-            [0.0, 0.0, 0.1173, 0.0, 0.7572, -0.4692, 0.0, -0.7572, -0.4692]
-        ),
-        "charge": 0,
-        "mult": 1,
-        "active_electrons": 4,
-        "active_orbitals": 4,
-    },
-    "h4_chain": {
-        "name": "H4 chain",
-        "symbols": ["H", "H", "H", "H"],
-        "coordinates": np.array(
-            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 2.0, 0.0, 0.0, 3.0]
-        ),
-        "charge": 0,
-        "mult": 1,
-        "active_electrons": 4,
-        "active_orbitals": 4,
-    },
-    "h2_stretched": {
-        "name": "H2 (stretched, 3.0 A)",
-        "symbols": ["H", "H"],
-        "coordinates": np.array([0.0, 0.0, 0.0, 0.0, 0.0, 3.0]),
-        "charge": 0,
-        "mult": 1,
-        "active_electrons": 2,
-        "active_orbitals": 2,
-    },
-    "lih_stretched": {
-        "name": "LiH (stretched, 3.0 A)",
-        "symbols": ["Li", "H"],
-        "coordinates": np.array([0.0, 0.0, 0.0, 0.0, 0.0, 3.0]),
-        "charge": 0,
-        "mult": 1,
-        "active_electrons": 2,
-        "active_orbitals": 3,
-    },
-}
+def load_molecules() -> dict[str, dict[str, Any]]:
+    """Load all molecule definitions from molecules/*.yaml.
+
+    Returns a dict mapping filename stem (e.g., "lih") to molecule config.
+    Translates the YAML field "multiplicity" to "mult" so build_hamiltonian
+    can keep reading config["mult"] unchanged.
+    """
+    molecules_dir = Path(__file__).parent / "molecules"
+    if not molecules_dir.exists():
+        raise FileNotFoundError(f"Required directory not found: {molecules_dir}")
+
+    out: dict[str, dict[str, Any]] = {}
+    for yaml_file in sorted(molecules_dir.glob("*.yaml")):
+        try:
+            with open(yaml_file) as f:
+                config = yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            raise RuntimeError(f"Failed to parse {yaml_file.name}: {e}") from e
+        if "multiplicity" in config:
+            config["mult"] = config.pop("multiplicity")
+        out[yaml_file.stem] = config
+
+    if not out:
+        raise RuntimeError(f"No molecule YAML files found in {molecules_dir}")
+    return out
+
+
+MOLECULES: dict[str, dict[str, Any]] = load_molecules()
+
+
+def molecule_choice(value: str) -> str:
+    """argparse type validator with a friendly error for the removed
+    "stretched" molecule keys (migrated to --bond-length 3.0)."""
+    if value in ("h2_stretched", "lih_stretched"):
+        base = value.removesuffix("_stretched")
+        raise argparse.ArgumentTypeError(
+            f"'--molecule {value}' was removed. "
+            f"Use: --molecule {base} --bond-length 3.0"
+        )
+    if value not in MOLECULES:
+        raise argparse.ArgumentTypeError(
+            f"'{value}' is not a known molecule. "
+            f"Available: {sorted(MOLECULES.keys())}"
+        )
+    return value
+
+
+def _build_diatomic_coords(bond_length: float) -> np.ndarray:
+    """Coordinates for a diatomic molecule along the z-axis (Å)."""
+    return np.array([0.0, 0.0, 0.0, 0.0, 0.0, bond_length])
+
+
+def _build_chain_coords(n_atoms: int, spacing: float) -> np.ndarray:
+    """Coordinates for a linear chain of n_atoms along the z-axis (Å)."""
+    coords = np.zeros(3 * n_atoms)
+    for i in range(n_atoms):
+        coords[3 * i + 2] = i * spacing
+    return coords
+
+
+def get_coordinates(
+    config: dict[str, Any],
+    bond_length: float | None = None,
+) -> np.ndarray:
+    """Resolve coordinates for a molecule, with optional bond_length override.
+
+    For molecules with a "geometry" block (diatomic, chain), bond_length
+    overrides the default. For molecules with explicit "coordinates",
+    passing bond_length raises ValueError.
+
+    Raises ValueError if bond_length is non-positive or outside the
+    molecule's allowed bond_length_range.
+    """
+    geom = config.get("geometry")
+
+    if bond_length is not None:
+        if geom is None:
+            raise ValueError(
+                f"Molecule '{config['name']}' has fixed coordinates; "
+                f"--bond-length is not supported."
+            )
+        if bond_length <= 0:
+            raise ValueError(f"bond_length must be positive, got {bond_length}")
+        bl_min, bl_max = geom["bond_length_range"]
+        if not (bl_min <= bond_length <= bl_max):
+            raise ValueError(
+                f"bond_length {bond_length} outside allowed range "
+                f"[{bl_min}, {bl_max}] for '{config['name']}'"
+            )
+
+    if geom is None:
+        return np.array(config["coordinates"])
+
+    if bond_length is None:
+        bond_length = geom["default_bond_length"]
+
+    if geom["type"] == "diatomic":
+        return _build_diatomic_coords(bond_length)
+    if geom["type"] == "chain":
+        return _build_chain_coords(len(config["symbols"]), bond_length)
+    raise ValueError(f"Unknown geometry type: {geom['type']}")
 
 
 def build_device(
@@ -209,7 +243,7 @@ def build_hamiltonian(
 
     mol = qml.qchem.Molecule(
         symbols=config["symbols"],
-        coordinates=config["coordinates"],
+        coordinates=get_coordinates(config),
         charge=config["charge"],
         mult=config["mult"],
         basis_name="sto-3g",
@@ -296,7 +330,7 @@ class TimeBudget:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="autoresearch-qc: prepare molecular Hamiltonians")
-    parser.add_argument("--molecule", default=MOLECULE, choices=list(MOLECULES.keys()),
+    parser.add_argument("--molecule", default=MOLECULE, type=molecule_choice,
                         help="Molecule to simulate (default: %(default)s)")
     parser.add_argument("--noise", type=float, default=0.0,
                         help="Depolarizing noise strength per gate (0.0 = noiseless)")

@@ -1,0 +1,11 @@
+name: "H4 chain"
+description: "Linear chain of 4 hydrogens at 1.0 Å spacing"
+symbols: ["H", "H", "H", "H"]
+charge: 0
+multiplicity: 1
+active_electrons: 4
+active_orbitals: 4
+geometry:
+  type: "chain"
+  default_bond_length: 1.0
+  bond_length_range: [0.7, 3.0]

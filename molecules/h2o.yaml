@@ -1,0 +1,8 @@
+name: "Water"
+description: "Water molecule, equilibrium geometry"
+symbols: ["O", "H", "H"]
+coordinates: [0.0, 0.0, 0.1173, 0.0, 0.7572, -0.4692, 0.0, -0.7572, -0.4692]
+charge: 0
+multiplicity: 1
+active_electrons: 4
+active_orbitals: 4
