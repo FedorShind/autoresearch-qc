@@ -21,15 +21,18 @@ import numpy as np
 from prepare import (
     MOLECULE, MOLECULES, TIME_BUDGET_SECONDS, CHEMICAL_ACCURACY_HA,
     build_hamiltonian, compute_exact_energy, evaluate, TimeBudget,
-    build_device, get_zne_config,
+    build_device, get_zne_config, molecule_choice,
 )
 
 # ============================================================
 # CLI ARGUMENTS
 # ============================================================
 parser = argparse.ArgumentParser(description="Noisy VQE with error mitigation")
-parser.add_argument("--molecule", default=MOLECULE, choices=list(MOLECULES.keys()),
+parser.add_argument("--molecule", default=MOLECULE, type=molecule_choice,
                     help="Molecule key (default: %(default)s)")
+parser.add_argument("--bond-length", type=float, default=None,
+                    help="Override default bond length (Å) for diatomics/chains; "
+                         "errors for fixed-geometry molecules.")
 parser.add_argument("--noise", type=float, default=0.005, help="Noise strength (default: 0.005)")
 args = parser.parse_args()
 
@@ -55,7 +58,7 @@ OPTIMIZER = "gradient_descent"  # options: gradient_descent, adam, nesterov
 # BUILD PROBLEM
 # ============================================================
 molecule_key = args.molecule
-hamiltonian, n_qubits, n_electrons, hf_state = build_hamiltonian(molecule_key)
+hamiltonian, n_qubits, n_electrons, hf_state = build_hamiltonian(molecule_key, bond_length=args.bond_length)
 exact_energy = compute_exact_energy(hamiltonian, n_qubits)
 
 # Noisy device (default.mixed + depolarizing noise model)

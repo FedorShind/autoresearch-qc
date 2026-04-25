@@ -35,6 +35,7 @@ from prepare import (
     TimeBudget,
     build_device,
     get_zne_config,
+    molecule_choice,
 )
 from optimize_noisy import rank_excitations, run_noisy_vqe_trial
 
@@ -244,21 +245,30 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Direct excitation count sweep for noise-optimal circuit validation"
     )
-    parser.add_argument("--molecule", type=str, default="lih",
-                        choices=list(MOLECULES.keys()))
+    parser.add_argument("--molecule", type=molecule_choice, default="lih")
+    parser.add_argument("--bond-length", type=float, default=None,
+                        help="Override default bond length (Å) for diatomics/chains; "
+                             "errors for fixed-geometry molecules.")
     args = parser.parse_args()
 
     molecule_key = args.molecule
 
     # Setup
     print(f"=== VALIDATION SWEEP: {MOLECULES[molecule_key]['name']} ===")
-    hamiltonian, n_qubits, n_electrons, hf_state = build_hamiltonian(molecule_key)
+    hamiltonian, n_qubits, n_electrons, hf_state = build_hamiltonian(
+        molecule_key, bond_length=args.bond_length
+    )
     exact_energy = compute_exact_energy(hamiltonian, n_qubits)
     singles, doubles = qml.qchem.excitations(n_electrons, n_qubits)
 
     print(f"Qubits: {n_qubits}, Electrons: {n_electrons}")
     print(f"Singles: {len(singles)}, Doubles: {len(doubles)}")
     print(f"Exact energy: {exact_energy:.8f} Ha")
+    geom = MOLECULES[molecule_key].get("geometry")
+    if geom is not None:
+        actual_bl = args.bond_length if args.bond_length is not None else geom["default_bond_length"]
+        suffix = "" if args.bond_length is None else " (override)"
+        print(f"Bond length: {actual_bl} A{suffix}")
     print(f"Hyperparameters: step={STEP_SIZE}, opt={OPTIMIZER}, init={INIT_SCALE}")
     print(f"ZNE: scale_factors={list(ZNE_SCALE_FACTORS)}, extrapolation=linear")
     print()

@@ -31,6 +31,7 @@ from prepare import (
     compute_exact_energy,
     evaluate,
     TimeBudget,
+    molecule_choice,
 )
 
 PENALTY_VALUE = 100.0
@@ -193,7 +194,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="BO search for optimal VQE configuration"
     )
-    parser.add_argument("--molecule", type=str, default=MOLECULE)
+    parser.add_argument("--molecule", type=molecule_choice, default=MOLECULE)
+    parser.add_argument("--bond-length", type=float, default=None,
+                        help="Override default bond length (Å) for diatomics/chains; "
+                             "errors for fixed-geometry molecules.")
     parser.add_argument("--n-trials", type=int, default=30)
     parser.add_argument("--time-budget", type=int, default=TIME_BUDGET_SECONDS)
     args = parser.parse_args()
@@ -204,13 +208,20 @@ def main() -> None:
 
     # Setup
     print(f"=== Bayesian Optimization for {MOLECULES[molecule_key]['name']} ===")
-    hamiltonian, n_qubits, n_electrons, hf_state = build_hamiltonian(molecule_key)
+    hamiltonian, n_qubits, n_electrons, hf_state = build_hamiltonian(
+        molecule_key, bond_length=args.bond_length
+    )
     exact_energy = compute_exact_energy(hamiltonian, n_qubits)
     singles, doubles = qml.qchem.excitations(n_electrons, n_qubits)
 
     print(f"Qubits: {n_qubits}, Electrons: {n_electrons}")
     print(f"Singles: {len(singles)}, Doubles: {len(doubles)}")
     print(f"Exact energy: {exact_energy:.8f} Ha")
+    geom = MOLECULES[molecule_key].get("geometry")
+    if geom is not None:
+        actual_bl = args.bond_length if args.bond_length is not None else geom["default_bond_length"]
+        suffix = "" if args.bond_length is None else " (override)"
+        print(f"Bond length: {actual_bl} A{suffix}")
     print()
 
     # Gradient ranking (once)

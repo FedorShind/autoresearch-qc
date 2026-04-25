@@ -224,6 +224,7 @@ def get_zne_config(
 
 def build_hamiltonian(
     molecule_key: str,
+    bond_length: float | None = None,
 ) -> tuple[qml.operation.Operator, int, int, np.ndarray]:
     """Build the qubit Hamiltonian for a molecule.
 
@@ -231,6 +232,9 @@ def build_hamiltonian(
 
     Args:
         molecule_key: Key into the MOLECULES dict (e.g., "h2", "lih").
+        bond_length: Override default bond length (Å) for diatomic/chain
+            molecules. None uses the YAML default. Raises ValueError if
+            passed for a fixed-geometry molecule (e.g., BeH2, H2O).
 
     Returns:
         Tuple of (hamiltonian, n_qubits, n_electrons, hf_state) where:
@@ -243,7 +247,7 @@ def build_hamiltonian(
 
     mol = qml.qchem.Molecule(
         symbols=config["symbols"],
-        coordinates=get_coordinates(config),
+        coordinates=get_coordinates(config, bond_length),
         charge=config["charge"],
         mult=config["mult"],
         basis_name="sto-3g",
@@ -332,6 +336,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="autoresearch-qc: prepare molecular Hamiltonians")
     parser.add_argument("--molecule", default=MOLECULE, type=molecule_choice,
                         help="Molecule to simulate (default: %(default)s)")
+    parser.add_argument("--bond-length", type=float, default=None,
+                        help="Override default bond length (Å) for diatomics/chains; "
+                             "errors for fixed-geometry molecules.")
     parser.add_argument("--noise", type=float, default=0.0,
                         help="Depolarizing noise strength per gate (0.0 = noiseless)")
     args = parser.parse_args()
@@ -340,13 +347,20 @@ if __name__ == "__main__":
     noise_strength = args.noise
 
     config = MOLECULES[molecule_key]
-    hamiltonian, n_qubits, n_electrons, hf_state = build_hamiltonian(molecule_key)
+    hamiltonian, n_qubits, n_electrons, hf_state = build_hamiltonian(
+        molecule_key, bond_length=args.bond_length
+    )
     exact_energy = compute_exact_energy(hamiltonian, n_qubits)
 
     print("=== autoresearch-qc prepare ===")
     print(f"molecule: {config['name']}")
     print(f"n_qubits: {n_qubits}")
     print(f"n_electrons: {n_electrons}")
+    geom = config.get("geometry")
+    if geom is not None:
+        actual_bl = args.bond_length if args.bond_length is not None else geom["default_bond_length"]
+        suffix = "" if args.bond_length is None else " (override)"
+        print(f"bond_length: {actual_bl} A{suffix}")
     print(f"exact_energy: {exact_energy:.6f} Ha")
     print(f"chemical_accuracy_target: {CHEMICAL_ACCURACY_HA} Ha (1.6 mHa)")
     print(f"time_budget: {TIME_BUDGET_SECONDS}s")

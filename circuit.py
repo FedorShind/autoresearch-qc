@@ -19,15 +19,18 @@ from pennylane import numpy as pnp
 import numpy as np
 from prepare import (
     MOLECULE, MOLECULES, TIME_BUDGET_SECONDS, CHEMICAL_ACCURACY_HA,
-    build_hamiltonian, compute_exact_energy, evaluate, TimeBudget
+    build_hamiltonian, compute_exact_energy, evaluate, TimeBudget, molecule_choice,
 )
 
 # ============================================================
 # CLI ARGUMENTS
 # ============================================================
 parser = argparse.ArgumentParser(description="VQE ansatz optimization")
-parser.add_argument("--molecule", default=MOLECULE, choices=list(MOLECULES.keys()),
+parser.add_argument("--molecule", default=MOLECULE, type=molecule_choice,
                     help="Molecule key (default: %(default)s)")
+parser.add_argument("--bond-length", type=float, default=None,
+                    help="Override default bond length (Å) for diatomics/chains; "
+                         "errors for fixed-geometry molecules.")
 args = parser.parse_args()
 
 # ============================================================
@@ -42,7 +45,7 @@ OPTIMIZER = "gradient_descent"  # options: gradient_descent, adam, nesterov
 # ============================================================
 # BUILD PROBLEM
 # ============================================================
-hamiltonian, n_qubits, n_electrons, hf_state = build_hamiltonian(args.molecule)
+hamiltonian, n_qubits, n_electrons, hf_state = build_hamiltonian(args.molecule, bond_length=args.bond_length)
 exact_energy = compute_exact_energy(hamiltonian, n_qubits)
 dev = qml.device("default.qubit", wires=n_qubits)
 
