@@ -97,6 +97,12 @@ Every gate adds noise proportional to p. Gates with low gradient magnitude becom
 
 Practical implication: gradient-based excitation ranking should be used to prune low-impact gates, more aggressively under noise than in the noiseless case.
 
+## Phase diagram
+
+How does the noise-optimal circuit shift across geometries? A 60-cell sweep over (bond_length, noise, n_doubles) maps the joint phase diagram for LiH. With all four singles always in the circuit, n_d=1 wins at every tested noisy cell, and chemical accuracy collapses to a single cell (bl=2.5 Å, p=0.01) at the highest noise. bl=3.5 Å is an ansatz expressibility wall (4 of 8 excitations have zero ideal gradient at the HF state, leaving an effective rank-4 ansatz that cannot span the FCI ground state at that geometry). Full details, limitations, and a "useful chemistry zone" lookup table in [`phase_diagram_report.md`](phase_diagram_report.md).
+
+![LiH phase diagram](phase_diagram_combined_lih.png)
+
 ## Findings
 
 **Ansatz architecture dominates.** Chemistry gates outperformed all hardware-efficient variants by 3--4 orders of magnitude. One architectural change on LiH improved accuracy by 10,000x.
