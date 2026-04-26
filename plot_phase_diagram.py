@@ -4,9 +4,9 @@ plot_phase_diagram.py — Generate phase diagram plots from phase_data_*.tsv.
 For each (bond_length, noise) cell, picks the n_doubles that minimises the
 ZNE-mitigated error (ties broken in favour of the smaller circuit). Produces:
 
-  phase_diagram_optimal_nd_<molecule>.png  — discrete heatmap, optimal n_d
-  phase_diagram_error_<molecule>.png       — continuous heatmap, log10 error
-  phase_diagram_combined_<molecule>.png    — 2-panel hero figure (16:9)
+  Images/phase_diagram_optimal_nd_<molecule>.png  — discrete heatmap, optimal n_d
+  Images/phase_diagram_error_<molecule>.png       — continuous heatmap, log10 error
+  Images/phase_diagram_combined_<molecule>.png    — 2-panel hero figure (16:9)
 
 Usage:
     uv run --extra analysis plot_phase_diagram.py --molecule lih
@@ -278,7 +278,7 @@ def main() -> None:
     plot_optimal_nd(ax, best, bond_lengths, noise_levels)
     annotate_exact_energies(ax, bond_lengths, exact_energies)
     fig.tight_layout()
-    out1 = f"phase_diagram_optimal_nd_{args.molecule}.png"
+    out1 = f"Images/phase_diagram_optimal_nd_{args.molecule}.png"
     fig.savefig(out1, dpi=180, facecolor=BG, bbox_inches="tight")
     print(f"Saved {out1}")
     plt.close(fig)
@@ -289,7 +289,7 @@ def main() -> None:
     plot_error_heatmap(ax, best, bond_lengths, noise_levels)
     annotate_exact_energies(ax, bond_lengths, exact_energies)
     fig.tight_layout()
-    out2 = f"phase_diagram_error_{args.molecule}.png"
+    out2 = f"Images/phase_diagram_error_{args.molecule}.png"
     fig.savefig(out2, dpi=180, facecolor=BG, bbox_inches="tight")
     print(f"Saved {out2}")
     plt.close(fig)
@@ -311,7 +311,7 @@ def main() -> None:
         ha="center", fontsize=10, fontfamily=MONO, color="#666666",
     )
     fig.tight_layout(rect=(0.0, 0.0, 1.0, 0.90))
-    out3 = f"phase_diagram_combined_{args.molecule}.png"
+    out3 = f"Images/phase_diagram_combined_{args.molecule}.png"
     fig.savefig(out3, dpi=180, facecolor=BG, bbox_inches="tight")
     print(f"Saved {out3}")
     plt.close(fig)
