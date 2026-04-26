@@ -1,5 +1,5 @@
 """
-plot.py — Generate progress.png from results.tsv.
+plot.py — Generate images/progress.png from results.tsv.
 
 Usage: uv run plot.py
 """
@@ -12,7 +12,7 @@ import pandas as pd
 
 CHEMICAL_ACCURACY_HA = 0.0016
 RESULTS_FILE = Path("results.tsv")
-OUTPUT_FILE = Path("progress.png")
+OUTPUT_FILE = Path("images/progress.png")
 
 
 def load_results() -> pd.DataFrame:
@@ -79,8 +79,8 @@ def plot_complexity(df: pd.DataFrame) -> None:
 
     ax1.set_title("Circuit Complexity Over Time", fontsize=14)
     fig.tight_layout()
-    fig.savefig("complexity.png", dpi=150)
-    print("Saved complexity.png")
+    fig.savefig("images/complexity.png", dpi=150)
+    print("Saved images/complexity.png")
 
 
 def print_summary(df: pd.DataFrame) -> None:
