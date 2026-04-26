@@ -202,18 +202,26 @@ Add a new molecule by creating `molecules/<key>.yaml` — see
 ## Files
 
 ```
-prepare.py          — Hamiltonian, exact energy, evaluation, noise config (frozen)
-circuit.py          — ansatz + VQE loop (agent edits, noiseless)
-noisy_circuit.py    — ansatz + noisy VQE + ZNE (agent edits, noisy mode)
-optimize.py         — Bayesian optimization, noiseless
-optimize_noisy.py   — Bayesian optimization under noise
-validate_sweep.py   — direct excitation count sweep for validation
-molecules/          — molecule definitions (one .yaml per molecule)
-program.md          — agent instructions, noiseless
-program_noisy.md    — agent instructions, noisy mode
-discovery_report.md — noise-optimal circuit findings + validation
-analysis.ipynb      — experiment analysis
-plot.py             — chart generation
+prepare.py             — Hamiltonian, exact energy, evaluation, noise config (frozen)
+circuit.py             — ansatz + VQE loop (agent edits, noiseless)
+noisy_circuit.py       — ansatz + noisy VQE + ZNE (agent edits, noisy mode)
+optimize.py            — Bayesian optimization, noiseless
+optimize_noisy.py      — Bayesian optimization under noise
+validate_sweep.py      — direct excitation count sweep
+phase_scan.py          — (bond_length, noise, n_doubles) grid sweep
+plot.py                — main progress chart generation
+plot_validation.py     — validation crossover and confound plots
+plot_phase_diagram.py  — phase diagram heatmaps
+analysis.ipynb         — experiment analysis notebook
+
+program.md             — agent instructions, noiseless mode
+program_noisy.md       — agent instructions, noisy mode
+
+molecules/             — molecule definitions (one .yaml per molecule)
+images/                — generated charts
+docs/                  — long-form reports
+  discovery_report.md     — v3 noise-optimal findings
+  phase_diagram_report.md — phase diagram findings
 ```
 
 ## Acknowledgments
