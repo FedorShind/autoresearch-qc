@@ -2,8 +2,8 @@
 plot_validation.py — Generate crossover plots from validation sweep data.
 
 Reads validate_sweep_*.tsv and generates:
-  - Images/validation_crossover_{molecule}.png (main result: noisy-optimized)
-  - Images/validation_confound_{molecule}.png (confound check: fixed-params)
+  - images/validation_crossover_{molecule}.png (main result: noisy-optimized)
+  - images/validation_confound_{molecule}.png (confound check: fixed-params)
 
 Usage:
     uv run --extra analysis plot_validation.py --molecule lih
@@ -131,7 +131,7 @@ def main() -> None:
         variant_data,
         error_key="noisy_opt_mitigated_error",
         title=f"{molecule.upper()}: Noisy-Optimized (Mode A)",
-        output_file=f"Images/validation_crossover_{molecule}.png",
+        output_file=f"images/validation_crossover_{molecule}.png",
         molecule=molecule,
     )
 
@@ -140,7 +140,7 @@ def main() -> None:
         variant_data,
         error_key="fixed_mitigated_error",
         title=f"{molecule.upper()}: Fixed-Params Confound Check (Mode B)",
-        output_file=f"Images/validation_confound_{molecule}.png",
+        output_file=f"images/validation_confound_{molecule}.png",
         molecule=molecule,
     )
 

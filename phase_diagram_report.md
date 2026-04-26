@@ -52,7 +52,7 @@ uv run --extra analysis plot_phase_diagram.py --molecule lih
 
 ### Phase diagram
 
-![combined hero figure](Images/phase_diagram_combined_lih.png)
+![combined hero figure](images/phase_diagram_combined_lih.png)
 
 Left panel: optimal n_doubles per cell, with red diagonal hatching where
 the best mitigated error in that cell still exceeds chemical accuracy
