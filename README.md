@@ -57,7 +57,7 @@ The agent discovered a universal recipe on LiH (experiment #4) that transferred 
 
 ## Discovery: noise-optimal circuit design
 
-Under simulated hardware noise, the optimal circuit structure changes. Full details in [`discovery_report.md`](discovery_report.md).
+Under simulated hardware noise, the optimal circuit structure changes. Full details in [`docs/discovery_report.md`](docs/discovery_report.md).
 
 ### The question
 
@@ -99,7 +99,7 @@ Practical implication: gradient-based excitation ranking should be used to prune
 
 ## Phase diagram
 
-How does the noise-optimal circuit shift across geometries? A 60-cell sweep over (bond_length, noise, n_doubles) maps the joint phase diagram for LiH. With all four singles always in the circuit, n_d=1 wins at every tested noisy cell, and chemical accuracy collapses to a single cell (bl=2.5 Å, p=0.01) at the highest noise. bl=3.5 Å is an ansatz expressibility wall (4 of 8 excitations have zero ideal gradient at the HF state, leaving an effective rank-4 ansatz that cannot span the FCI ground state at that geometry). Full details, limitations, and a "useful chemistry zone" lookup table in [`phase_diagram_report.md`](phase_diagram_report.md).
+How does the noise-optimal circuit shift across geometries? A 60-cell sweep over (bond_length, noise, n_doubles) maps the joint phase diagram for LiH. With all four singles always in the circuit, n_d=1 wins at every tested noisy cell, and chemical accuracy collapses to a single cell (bl=2.5 Å, p=0.01) at the highest noise. bl=3.5 Å is an ansatz expressibility wall (4 of 8 excitations have zero ideal gradient at the HF state, leaving an effective rank-4 ansatz that cannot span the FCI ground state at that geometry). Full details, limitations, and a "useful chemistry zone" lookup table in [`docs/phase_diagram_report.md`](docs/phase_diagram_report.md).
 
 ![LiH phase diagram](images/phase_diagram_combined_lih.png)
 

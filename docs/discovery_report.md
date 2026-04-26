@@ -102,7 +102,7 @@ Mode A and Mode B produce nearly identical results (differences < 0.002 mHa). Th
 
 4. **ZNE overshoot at low noise.** Some n_d=2 results at p=0.001 show mitigated error below the ideal error. This is a known ZNE artifact -- linear extrapolation can overcorrect when the noise-energy relationship is sub-linear.
 
-![LiH crossover plot](images/validation_crossover_lih.png)
+![LiH crossover plot](../images/validation_crossover_lih.png)
 
 ## Conclusion
 
