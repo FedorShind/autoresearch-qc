@@ -45,7 +45,7 @@ phase_diagram_*_lih.png. Reproduce with:
 ```
 uv run phase_scan.py --molecule lih --bond-lengths 1.546 2.0 2.5 3.0 3.5 \
     --noise-levels 0.0 0.005 0.01 --n-doubles 1 2 3 4
-uv run --extra analysis plot_phase_diagram.py --molecule lih
+uv run plot_phase_diagram.py --molecule lih
 ```
 
 ## 3. Results

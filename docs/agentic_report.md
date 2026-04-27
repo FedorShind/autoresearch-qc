@@ -48,8 +48,8 @@ baseline used 60.
 Reproduce with:
 
 ```
-uv run --extra optimize phase_agent.py --molecule lih --budget 20
-uv run --extra analysis --extra optimize plot_agent_comparison.py --molecule lih
+uv run phase_agent.py --molecule lih --budget 20
+uv run plot_agent_comparison.py --molecule lih
 ```
 
 Outputs are `phase_agent_lih.tsv`, `phase_agent_lih.log`, and

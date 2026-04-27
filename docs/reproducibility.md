@@ -36,7 +36,7 @@ Wall time per cell: ~100 s, matching the grid's average.
 Reproduction command:
 
 ```
-uv run --extra optimize phase_scan.py --molecule lih \
+uv run phase_scan.py --molecule lih \
     --bond-lengths 2.5 --noise-levels 0.01 --n-doubles 1 \
     --output phase_repro_lih.tsv
 ```
@@ -101,7 +101,7 @@ Source: `docs/agentic_report.md`. Original used seed 42.
 command:
 
 ```
-uv run --extra optimize phase_agent.py --molecule lih --budget 20 --seed 7 \
+uv run phase_agent.py --molecule lih --budget 20 --seed 7 \
     --output phase_agent_lih_seed7.tsv \
     --log phase_agent_lih_seed7.log \
     --gp-path phase_agent_lih_seed7.gp.pkl
@@ -260,3 +260,13 @@ correct invocation is `uv run --extra optimize phase_scan.py ...`.
 This is a packaging/documentation issue, not a scripting bug, and is
 trivially worked around. No script was modified to avoid this in the
 reproduction pass.
+
+**Resolved by commit `chore: collapse optional extras into base
+dependencies`**: `matplotlib`, `pandas`, and `scikit-optimize` were
+moved from the `[analysis]` and `[optimize]` extras into base
+`dependencies`. The `[project.optional-dependencies]` section was
+removed. Quick-start now works with bare `uv sync`; all script
+invocations no longer need `--extra` flags. Verified with a clean
+`rm -rf .venv && uv sync` followed by importing every load-bearing
+script and running `phase_scan.py` and `plot_phase_diagram.py` without
+any extras.
