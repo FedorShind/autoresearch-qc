@@ -153,11 +153,53 @@ The agentic finding is not seed-dependent.
 
 ### 5. Image paths and plotting
 
-(pending)
+Source: recent tidy commits that renamed `Images/` to `images/` and
+moved reports into `docs/`.
+
+| script                        | result                       | notes                                  |
+| ----------------------------- | ---------------------------- | -------------------------------------- |
+| plot.py                       | fail (missing results.tsv)   | needs `results.tsv` from a circuit.py run; gitignored |
+| plot_validation.py            | success                      | wrote validation_*.png to images/      |
+| plot_phase_diagram.py         | success                      | wrote phase_diagram_*.png to images/   |
+| plot_agent_comparison.py      | success                      | wrote agent_*.png to images/           |
+
+The `plot.py` failure is not a tidy-pass regression. It needs
+`results.tsv` produced by running circuit.py through an experiment
+session, which is gitignored and not present after a clean clone. The
+script's error message is clear ("Error: results.tsv not found. Run
+some experiments first."), so this is correct behavior, not a bug.
+
+The other three plot scripts run cleanly and write to lowercase
+`images/`. Regenerated PNGs are byte-identical to committed copies
+except for `phase_diagram_combined_lih.png` (194595 -> 194803 bytes,
+0.1% size change), which is a matplotlib metadata artifact (likely a
+date stamp in the figure caption) rather than a real plot change. The
+PNG was reverted rather than committed.
+
+Filesystem casing: `git ls-files | grep -i images` shows only
+lowercase paths. `Images/` (uppercase) does not exist on disk; Windows
+NTFS case-insensitive matching can resolve `ls Images` to the
+lowercase directory, but `git` and `Path` both report lowercase
+consistently.
 
 ### 6. Markdown link integrity
 
-(pending)
+Both link checkers from the brief ran clean across every `*.md` file
+under the repo (excluding `.git`, `node_modules`, `.venv`):
+
+```
+$ python -c "<image-link checker>"
+All markdown image links resolve.
+
+$ python -c "<cross-doc link checker>"
+All markdown cross-doc links resolve.
+```
+
+No broken image links, no broken cross-doc links. The `[`...`](...)`
+references in the four reports (`discovery_report.md`,
+`phase_diagram_report.md`, `agentic_report.md`, `reproducibility.md`)
+and in `README.md` and `molecules/README.md` all resolve to existing
+files relative to their parent directory.
 
 ## Summary
 
