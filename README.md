@@ -103,6 +103,12 @@ How does the noise-optimal circuit shift across geometries? A 60-cell sweep over
 
 ![LiH phase diagram](images/phase_diagram_combined_lih.png)
 
+### Active learning sampler
+
+Once the grid identified n_d=1 as the all_singles winner at every noisy cell, a Gaussian-process active-learning sampler recovers the same chemical-accuracy boundary in 20 evaluations vs the grid's 60. Each pick maximizes the level-set straddle criterion `sigma * exp(-(mu - log10(1.6))^2 / (2*tau^2))` on a 50x50 candidate grid in standardized (bl, p) space. The agent reaches a boundary RMSE the grid baseline only matches at k=50, a 2.5x speedup at this restricted question. Trajectory, sanity checks, and limitations in [`docs/agentic_report.md`](docs/agentic_report.md).
+
+![active learning vs grid baseline](images/agent_combined_lih.png)
+
 ## Findings
 
 **Ansatz architecture dominates.** Chemistry gates outperformed all hardware-efficient variants by 3--4 orders of magnitude. One architectural change on LiH improved accuracy by 10,000x.
@@ -209,9 +215,11 @@ optimize.py            — Bayesian optimization, noiseless
 optimize_noisy.py      — Bayesian optimization under noise
 validate_sweep.py      — direct excitation count sweep
 phase_scan.py          — (bond_length, noise, n_doubles) grid sweep
+phase_agent.py            GP active-learning sampler on (bl, p)
 plot.py                — main progress chart generation
 plot_validation.py     — validation crossover and confound plots
 plot_phase_diagram.py  — phase diagram heatmaps
+plot_agent_comparison.py  active-learning vs grid baseline plots
 analysis.ipynb         — experiment analysis notebook
 
 program.md             — agent instructions, noiseless mode
@@ -222,6 +230,7 @@ images/                — generated charts
 docs/                  — long-form reports
   discovery_report.md     — v3 noise-optimal findings
   phase_diagram_report.md — phase diagram findings
+  agentic_report.md          active-learning boundary recovery
 ```
 
 ## Acknowledgments
