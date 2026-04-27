@@ -70,7 +70,28 @@ time_budget=300s).
 
 ### 3. ZNE overshoot artifact at p=0.001
 
-(pending)
+Source: `docs/discovery_report.md`, Mode A LiH zero_singles table.
+
+The discovery report flags that at low noise (p=0.001), linear ZNE
+extrapolation can overcorrect, producing a mitigated error below the
+noiseless ideal. This is a known artifact of using fold-2 and fold-3
+amplified noise points to extrapolate to zero with a linear model when
+the true noise-vs-error curve is sublinear. Verified that the artifact
+still occurs and the magnitude is still bounded.
+
+| metric                                | original    | reproduction | check    |
+| ------------------------------------- | ----------- | ------------ | -------- |
+| mitigated_error (n_d=2, p=0.001)      | 0.000 mHa   | 0.0005 mHa   | rounded  |
+| ideal_error                           | (not shown) | 0.0296 mHa   | recorded |
+| mitigated < ideal (overshoot occurs)  | yes         | yes          | match    |
+| mitigated < 0.05 mHa (still bounded)  | yes         | yes          | match    |
+
+The original table reports `0.000 mHa`, which is the rounded form of
+the cell's actual sub-millihartree value. The reproduction prints
+`0.0005 mHa`, consistent with the original to two-decimal precision in
+mHa. The overshoot magnitude (mitigated - ideal = -0.029 mHa) is
+small enough that the n_d=2 winning claim at p=0.001 is unaffected.
+
 
 ### 4. Agentic with seed 7
 
