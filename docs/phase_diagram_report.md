@@ -216,3 +216,7 @@ not in this run.
   structure of the diagram suggests yes.
 - **Finer noise grid.** Add p=0.001, 0.002, 0.003 to nail down the
   curvature of the chemical-accuracy boundary between 0 and 0.005.
+
+## Reproduction
+
+Headline numbers were independently re-run from a clean clone. See [reproducibility.md](reproducibility.md).

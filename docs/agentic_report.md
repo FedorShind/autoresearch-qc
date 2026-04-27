@@ -261,3 +261,7 @@ agent is the right tool.
   regime past the useful zone). Verify it reports "no crossing"
   cleanly across all bl rather than confabulating a boundary inside
   the search range.
+
+## Reproduction
+
+Headline numbers were independently re-run from a clean clone. See [reproducibility.md](reproducibility.md).

@@ -111,3 +111,7 @@ Under depolarizing noise with ZNE mitigation, the optimal VQE circuit is consist
 The mechanism is straightforward: every gate adds noise proportional to the depolarizing probability p. Gates that contribute little to the ideal energy (low gradient magnitude) become net-negative under noise -- they add more error through noise accumulation than they remove through expressibility. ZNE can partially correct for noise, but it works better on shallower circuits where the noise-energy relationship is more linear.
 
 The practical implication: when designing VQE circuits for noisy hardware, standard excitation ranking (gradient magnitude at Hartree-Fock state) should be used to prune low-impact excitations, even more aggressively than in the noiseless case. The optimal pruning threshold increases with noise strength.
+
+## Reproduction
+
+Headline numbers were independently re-run from a clean clone. See [reproducibility.md](reproducibility.md).
