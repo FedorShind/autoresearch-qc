@@ -95,7 +95,61 @@ small enough that the n_d=2 winning claim at p=0.001 is unaffected.
 
 ### 4. Agentic with seed 7
 
-(pending)
+Source: `docs/agentic_report.md`. Original used seed 42.
+
+`phase_agent.py` already exposes `--seed`, so reproduction is a single
+command:
+
+```
+uv run --extra optimize phase_agent.py --molecule lih --budget 20 --seed 7 \
+    --output phase_agent_lih_seed7.tsv \
+    --log phase_agent_lih_seed7.log \
+    --gp-path phase_agent_lih_seed7.gp.pkl
+```
+
+Seed flows to: numpy global RNG, the scrambled Sobol stream, and the
+GP regressor's `random_state` (which controls n_restarts_optimizer
+warm starts). The VQE evaluation itself is deterministic on
+`default.mixed` at zero init scale, so a different seed changes
+*which* (bl, p) get sampled, not the value at any given (bl, p).
+
+| check                                         | seed 42 (original) | seed 7 (reproduction) | verdict      |
+| --------------------------------------------- | ------------------ | --------------------- | ------------ |
+| Sweet spot (bl=2.5, p=0.01) GP prediction     | 1.552 mHa          | 1.389 mHa             | both below 1.6 |
+| Sweet spot classification                     | chem.acc.          | chem.acc.             | match        |
+| 12 reference cells classified correctly       | 12 / 12            | 12 / 12               | match        |
+| Final GP sigma_mean (log10 mHa)               | 0.044              | 0.023                 | within +/-50% |
+| Final GP sigma_max (log10 mHa)                | 0.111              | 0.110                 | match        |
+| Wall time (32 +/- 5 min target)               | 32 min             | 35.7 min              | within range |
+| Sampling pattern (boundary-preferential)      | yes                | yes                   | match        |
+
+Seed 7's σ_mean (0.023) is tighter than seed 42's (0.044), suggesting
+this Sobol init plus the resulting active-learning picks gave better
+boundary coverage by chance. The qualitative behavior matches: 5 Sobol
+points cover the (bl, p) space, then 15 active picks concentrate near
+the predicted boundary (8 of 15 active picks landed at p > 0.007), with
+two noiseless anchors at bl=3.0 and bl=2.469 instead of seed 42's
+single anchor at bl=3.0.
+
+Per-bl boundary thresholds (95% CI on p_chem from final GP):
+
+| bl     | seed 42 p_chem    | seed 7 p_chem     |
+| ------ | ----------------- | ----------------- |
+| 1.000  | 0.00974           | 0.00984           |
+| 1.546  | 0.00974           | 0.00966           |
+| 2.000  | 0.00846           | 0.00933           |
+| 2.500  | 0.01043 (unbounded upper) | 0.01117 (bounded) |
+| 3.000  | 0.00677           | 0.00675           |
+
+Same qualitative shape: bl=2.5 has the highest p_chem (sweet spot),
+bl=3.0 the lowest within the (1.546, 3.0) range. Seed 7 places the
+bl=2.5 boundary slightly higher (0.01117 vs 0.01043) and gives it a
+bounded upper CI rather than unbounded, because seed 7 happened to
+sample a stretched-noiseless anchor (iter 19, bl=2.469, p=0.0) that
+seed 42 did not.
+
+The agentic finding is not seed-dependent.
+
 
 ### 5. Image paths and plotting
 
