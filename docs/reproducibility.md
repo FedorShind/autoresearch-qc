@@ -43,7 +43,30 @@ uv run --extra optimize phase_scan.py --molecule lih \
 
 ### 2. v3 zero_singles finding
 
-(pending)
+Source: `docs/discovery_report.md`, Mode A LiH zero_singles sweep.
+
+The crossover finding: at p=0.01 with no singles in the circuit, the
+top-2 doubles outperform the full 4 doubles by an order of magnitude
+because the extra gates add more noise than they remove via
+expressibility.
+
+| cell                                | original   | reproduction | delta    | within 5% |
+| ----------------------------------- | ---------- | ------------ | -------- | --------- |
+| zero_singles, n_d=2, p=0.01         | 0.133 mHa  | 0.1331 mHa   | 0.0%     | yes       |
+| zero_singles, n_d=4, p=0.01         | 1.792 mHa  | 1.7924 mHa   | 0.0%     | yes       |
+
+Both cells reproduce bit-identically. The 13.5x ratio (1.792 / 0.133)
+between full UCCSD and the 2-doubles subset is preserved as 13.5x
+(1.7924 / 0.1331).
+
+Reproduction was via a direct call to `run_noisy_vqe_trial` from
+`optimize_noisy` rather than running the full `validate_sweep.py`
+sweep, since `validate_sweep.py` evaluates 32 noisy cells and would
+take ~50 minutes; the targeted call reproduces the two specific cells
+in under 3 minutes with the exact same hyperparameters
+(Nesterov, step=0.4, zero init, conv=1e-8, ZNE [1, 2, 3] linear,
+time_budget=300s).
+
 
 ### 3. ZNE overshoot artifact at p=0.001
 
