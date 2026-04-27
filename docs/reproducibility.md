@@ -203,7 +203,36 @@ files relative to their parent directory.
 
 ## Summary
 
-(pending)
+All six checks passed. The five deterministic checks reproduce
+bit-identically against the original numbers in the reports
+(phase-diagram cells 1.4828 and 0.6627 mHa; v3 zero_singles cells
+0.1331 and 1.7924 mHa; ZNE overshoot at p=0.001 still real and still
+bounded). The seeded check (agentic at seed 7) recovers the same
+chemical-accuracy boundary as the original seed 42, with the
+(bl=2.5 A, p=0.01) sweet spot correctly identified and the same
+12-of-12 reference-cell classification. Image paths, plot scripts, and
+markdown link integrity all hold post-tidy.
+
+Two non-numerical observations worth recording for any external
+writeup:
+
+- **Setup gotcha.** A bare `uv sync` reverts to the base dependency
+  set, after which `phase_scan.py` and `validate_sweep.py` crash at
+  import via `optimize_noisy -> skopt` (which lives in the `optimize`
+  extra). The README's quick-start commands work only if extras are
+  installed; new contributors will hit this. Either pin the extras in
+  the README's quick-start block, or move `skopt` into the base
+  dependency set.
+- **Agentic σ_mean has mild seed dependence.** Seed 42 gave
+  σ_mean = 0.044 in log10 mHa. Seed 7 gave 0.023, tighter by chance
+  thanks to a Sobol pattern that happened to anchor a stretched
+  noiseless cell the seed-42 run did not. The qualitative boundary,
+  the sweet spot, and the 12-cell classification are unchanged across
+  seeds. If σ_mean appears in any public writeup, treat it as one
+  realization rather than a precise property of the algorithm.
+
+Headline numbers are safe to publish. No caveats need to be added to
+the three existing reports based on this pass.
 
 ## What this does NOT verify
 
