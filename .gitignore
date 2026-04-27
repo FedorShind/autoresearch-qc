@@ -8,11 +8,14 @@ dist/
 # Project
 run.log
 phase_scan_*.log
+phase_agent_*.log
 results.tsv
 optimize_results_*.tsv
 optimize_noisy_results_*.tsv
 validate_sweep_*.tsv
 phase_data_*.tsv
+phase_agent_*.tsv
+phase_agent_*.gp.pkl
 *.npy
 *.npz
 BO-prompt.md
